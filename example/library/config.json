@@ -1,0 +1,15 @@
+{
+	"GATEWAY": true,
+	"TARGET": {
+		"HOME":   "content/home.php",
+		"LOGIN":  "content/login.php",
+		"LOGOUT": "content/logout.php",
+		"page1":  "content/file1.php",
+		"page2":  "content/file2.php",
+		"page3":  "content/file3.php"
+	},
+	"LOG":     ["usr", "pwd"],
+	"AUTH":    "credentialChecker",
+	"CHECK":   "accessChecker",
+	"TIMEOUT": 180
+}

@@ -105,17 +105,18 @@ Below is an example of an authentication page and the corresponding value of `LO
 
 ```html
 <form method="post" action="?" >
-	<label for="user">User identifier:</label>
-	<input type="text" name="user" id="user" required="" autofocus="" autocomplete="off" />
+	<label for="usr">User identifier:</label>
+	<input type="text" name="usr" id="usr" required="" autofocus="" autocomplete="off" />
 	<label for="pwd">Password:</label>
 	<input type="password" name="pwd" id="pwd" required="" autofocus="" autocomplete="off" />
+	<button type="submit">Go</button>
 </form>
 ```
 
 ```php
 $config = array(
 	...
-	"LOG" => array("user", "pwd"),
+	"LOG" => array("usr", "pwd"),
 	...
 );
 ```
@@ -170,6 +171,9 @@ $config = array(
 );
 ```
 
+If the identifier is `HOME`, `LOGIN` or `LOGOUT`, access will not be verified.
+
+
 ### TIMEOUT
 
 |Key|Type|Required|Default|Description|
@@ -193,7 +197,7 @@ $config = array(
 		"page2"  => "content/file2.html",
 		"page3"  => "content/file3.html"
 	),
-	"LOG"     => array("user", "pwd"),
+	"LOG"     => array("usr", "pwd"),
 	"AUTH"    => "credentialChecker",
 	"CHECK"   => "accessChecker",
 	"TIMEOUT" => 180
@@ -211,7 +215,7 @@ $config = array(
 		"page2":  "content/file2.html",
 		"page3":  "content/file3.html"
 	},
-	"LOG":     ["user", "pwd"],
+	"LOG":     ["usr", "pwd"],
 	"AUTH":    "credentialChecker",
 	"CHECK":   "accessChecker",
 	"TIMEOUT": 180
@@ -224,7 +228,7 @@ $config = array(
 |:----:|:-----:|:------:|:-----:|:----------|
 |path|String|None|None|Returns the file path defined by the **Driver** during the request.|
 |status|Integer/String|Boolean|False|Returns the status of the behavior defined by the **Driver** during the request.|
-|debug|None|Boolean|False|Prints the characteristics that define the behavior of **Driver**.|
+|debug|Array|Boolean|False|Returns an array with characteristics defined/considered by the **Driver**|
 |version|String|None|None|Returns the library version.|
 
 ### path
@@ -266,10 +270,10 @@ The method has no argument.
 ### debug
 
 ```php
-debug($json)
+debug($print)
 ```
 
-The method has an optional argument which, if true, will print the configuration considered by the **Driver** as a JSON structure.
+The method has an optional argument which, if true, will print to the screen the data it returns.
 
 ## Session
 
