@@ -11,6 +11,7 @@ include "library/user.php";
 
 /* Calling the constructor: */
 $driver = new Driver("library/config.json");
+$driver->check();
 
 /* Getting the file path: */
 $path = $driver->path();
@@ -46,7 +47,7 @@ $debug  = $driver->debug();
 <?php
 
 /* Displaying the file defined by the object: */
-include $driver->path();
+include $path;
 
 ?>
 
