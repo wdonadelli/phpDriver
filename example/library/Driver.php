@@ -255,6 +255,29 @@ class Driver {
 	}
 
 /*----------------------------------------------------------------------------*/
+	private function isFile($path) {
+		/* verifica se o argumento é um caminho de arquivo válido (boolean) */
+		if (gettype($path) !== "string") {return false;}
+		if (!is_file($path)) {return false;}
+		return true;
+	}
+
+/*----------------------------------------------------------------------------*/
+	private function getPath($id) {
+		/* devolve o caminho da página a ser exibida (string), ou null */
+		if (!array_key_exists("id", $_GET)) {return null;}
+
+
+
+
+
+
+		return true;
+	}
+
+
+
+/*----------------------------------------------------------------------------*/
 	private function hash() {
 		/* define o identificador da sessão a partir dos dados do usuário */
 
