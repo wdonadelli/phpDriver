@@ -1,21 +1,15 @@
 {
 	"HOME": "content/home.html",
-	"LOGIN": "content/home.login.html",
-	"LOGOUT": "content/home.login.html",
-	"DATA": ["usr", "pwd"],
-	"PAGES": {
+	"ID": {
 		"id1": "content/id1.html",
 		"id2": "content/id2.html",
 		"id3": "content/id3.html"
 	},
-	"TIME": 180,
-	"TRIGGERS": {
-		"START": "waitting",
+	"LOG": {
+		"GATEWAY": "content/home.login.html",
+		"DATA": ["usr", "pwd"],
 		"LOGIN": "checkUser",
 		"LOAD": "checkAccess",
-		"LOGOUT": "sayGoodBye",
-		"TIMEOUT": "checkTime"
+		"TIME": 180
 	}
-
 }
-
