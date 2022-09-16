@@ -11,14 +11,13 @@ include "library/user.php";
 
 /* Calling the constructor: */
 $driver = new Driver("library/config.json");
-$driver->check();
 
 /* Getting the file path: */
 $path = $driver->path();
 
 /* Getting the status message and debug data */
 $status = $driver->status(true);
-$debug  = $driver->debug();
+$debug  = $driver->debug(true);
 
 ?>
 <!DOCTYPE html>
