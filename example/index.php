@@ -15,9 +15,11 @@ $driver = new Driver("library/config.json");
 /* Getting the file path: */
 $path = $driver->path();
 
+//$driver->path();
+
 /* Getting the status message and debug data */
 $status = $driver->status(true);
-$debug  = $driver->debug(true);
+$debug  = $driver->debug();
 
 ?>
 <!DOCTYPE html>

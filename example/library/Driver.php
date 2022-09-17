@@ -39,6 +39,7 @@ class Driver {
 	private $VERSION = "v1.0.0"; /* registra versão da biblioteca */
 	private $CONFIG;             /* registra os dados de configuração */
 	private $STATUS;             /* regista o identificador do progresso */
+	private $PATH = false;       /* regista se método path já foi executado (só pode uma vez) */
 	private $TRIGGERS = array(); /* registra os acionadores do objeto */
 	private $EVENTS = array(     /* registra as fases da requisição */
 		0 => "SESSION STARTED",
@@ -52,7 +53,53 @@ class Driver {
 		8 => "SESSION EXPIRED",
 		9 => "MODIFIED ROUTE"
 	);
-
+	private $STRUCT = array(     /* registra restrições de CONFIG */
+		"HOME" => array(
+			"REQUIRED" => true,
+			"TYPE"     => "file"
+		),
+		"ID" => array(
+			"REQUIRED" => true,
+			"TYPE"     => "array",
+			"BADKEYS"  => array("HOME", "EXIT"),
+			"TYPELIST" => "file"
+		),
+		"LOG" => array(
+			"REQUIRED" => false,
+			"TYPE"     => "array",
+			"KEYS"     => array(
+				"GATEWAY" => array(
+					"REQUIRED" => true,
+					"TYPE"     => "file"
+				),
+				"DATA" => array(
+					"REQUIRED" => true,
+					"TYPE"     => "array",
+					"SIZE"     => 1,
+					"TYPELIST" => "string"
+				),
+				"LOGIN" => array(
+					"REQUIRED" => true,
+					"TYPE"     => "function"
+				),
+				"LOAD" => array(
+					"REQUIRED" => false,
+					"TYPE"     => "function"
+				),
+				"TIME" => array(
+					"REQUIRED" => false,
+					"TYPE"     => "integer",
+					"SIZE"     => 1
+				)
+			)
+		)
+	);
+	private $SESSION = array( /* Dados de sessão SESSION[__DRIVER__] */
+		"USER" => null,   /* dados do usuário (fixo) [mixed] */
+		"TIME" => null,   /* momento do login (fixo) [string] */
+		"HASH" => null,   /* identificador do login (fixo) [string] */
+		"LOG"  => array() /* histórico de ações (variável) [array] */
+	);
 /*----------------------------------------------------------------------------*/
 	public function __construct($config) {
 
@@ -60,27 +107,32 @@ class Driver {
 		$this->config($config);
 
 		/* iniciar sessão */
-		session_start();
-
-		/* definir chaves de sessão */
-		if (!array_key_exists("__DRIVER__", $_SESSION)) { /* chave principal */
-			$_SESSION["__DRIVER__"] = array();
-		}
-		if (!array_key_exists("USER", $_SESSION["__DRIVER__"])) { /* dados do usuário (fixo) [mixed] */
-			$_SESSION["__DRIVER__"]["USER"] = null;
-		}
-		if (!array_key_exists("TIME", $_SESSION["__DRIVER__"])) { /* momento do login (fixo) [string] */
-			$_SESSION["__DRIVER__"]["TIME"] = null;
-		}
-		if (!array_key_exists("HASH", $_SESSION["__DRIVER__"])) { /* identificador do login (fixo) [string] */
-			$_SESSION["__DRIVER__"]["HASH"] = null;
-		}
-		if (!array_key_exists("LOG", $_SESSION["__DRIVER__"])) { /* histórico de ações (array) */
-			$_SESSION["__DRIVER__"]["LOG"] = array();
-		}
+		$this->start();
 
 		/* definir status */
 		$this->STATUS = 0;
+		return;
+	}
+
+/*----------------------------------------------------------------------------*/
+	private function start() {
+		/* inicia dados da sessão */
+
+		/* iniciar se não iniciada */
+		if (!isset($_SESSION)) {
+			session_start();
+		}
+
+		/* definir chave principal de sessão */
+		if (!array_key_exists("__DRIVER__", $_SESSION)) {
+			$_SESSION["__DRIVER__"] = array();
+		}
+		/* definir chaves secundárias de sessão */
+		foreach ($this->SESSION as $key => $value) {
+			if (!array_key_exists($key, $_SESSION["__DRIVER__"])) {
+				$_SESSION["__DRIVER__"][$key] = $value;
+			}
+		}
 		return;
 	}
 
@@ -95,21 +147,18 @@ class Driver {
 			/* 1) tentar ler o conteúdo do arquivo */
 			$content = file_get_contents($config);
 			if ($content === false) {
-				trigger_error("Driver: Error reading configuration file.");
-				exit;
+				$this->error("CONFIG", "Error reading configuration file");
 			}
 
 			/* 2) tentar decodifica o JSON para array */
 			$array = json_decode($content, true);
 			if ($array === null) {
-				trigger_error("Driver: Error in JSON file structure.");
-				exit;
+				$this->error("CONFIG", "Error in JSON file structure");
 			}
 
 			/* 3) checar o dado primário do JSON é um array */
 			if (gettype($array) !== "array") {
-				trigger_error("Driver: Inadequate configuration data.");
-				exit;
+				$this->error("CONFIG", "Inadequate configuration data");
 			}
 
 			/* 4) definir CONFIG */
@@ -121,8 +170,7 @@ class Driver {
 
 		} else {
 			/* no caso de falhar com o arquivo ou array */
-			trigger_error("Driver: inappropriate argument.");
-			exit;
+			$this->error("CONFIG", "Inappropriate argument");
 		}
 
 		/* checar dados de CONFIG */
@@ -131,119 +179,68 @@ class Driver {
 		return;
 	}
 
-
 /*----------------------------------------------------------------------------*/
-	private function check() {
-		/* checa os dados e retorna um erro se irreparável */
+	private function check($ref = null) {
 
-		/* HOME: página inicial (obrigatório) [string:file] */
-		if (!array_key_exists("HOME", $this->CONFIG)) {
-			trigger_error("CONFIG[HOME]: Information not provided.");
-			exit;
-		}
-		if (!$this->isFile($this->CONFIG["HOME"])) {
-			trigger_error("CONFIG[HOME]: No file found.");
-			exit;
-		}
+		/* obter dados */
+		$data   = $ref === null ? $this->CONFIG : $this->CONFIG[$ref];
+		$struct = $ref === null ? $this->STRUCT : $this->STRUCT[$ref]["KEYS"];
 
+		/* looping pelas restrições */
+		foreach ($struct as $id => $check) {
 
-		/* ID: lista de páginas/arquivos (facultativo) [array] */
-		if (!array_key_exists("ID", $this->CONFIG)) {
-			$this->CONFIG["ID"] = array();
-		}
-		foreach($this->CONFIG["ID"] as $id => $file) {
-			if (in_array($id, array("HOME", "EXIT"))) {
-				trigger_error("CONFIG[ID][{$id}]: Inappropriate identifier.");
-				exit;
+			$info   = $ref === null ? "CONFIG.{$id}" : "CONFIG.{$ref}.{$id}";
+
+			/* se chave não obrigatória e não foi definida: null */
+			if ($check["REQUIRED"] === false && !array_key_exists($id, $data)) {
+				if ($ref === null) {$this->CONFIG[$id]       = null;}
+				else               {$this->CONFIG[$ref][$id] = null;}
+
+			} else {
+				/* se chave é obrigatória: checar */
+				if (!array_key_exists($id, $data)) {
+					$this->error($info, "Information not provided");
+				}
+
+				/* checar o tipo */
+				if (!$this->matchType($check["TYPE"], $data[$id])) {
+					$this->error($info, "Inappropriate information");
+				}
+
+				/* checar valor mínimo */
+				if (array_key_exists("SIZE", $check)) {
+					$size = $check["TYPE"] === "array" ? count($data[$id]) : $data[$id];
+					if ($size < $check["SIZE"]) {
+						$this->error($info, "Insufficient data");
+					}
+				}
+
+				/* checar identificadores proibidos */
+				if (array_key_exists("BADKEYS", $check)) {
+					foreach($data[$id] as $key => $item) {
+						if (in_array($key, $check["BADKEYS"])) {
+							$this->error($info, "Inappropriate identifier ($key)");
+						}
+					}
+				}
+
+				/* checar tipos da lista */
+				if (array_key_exists("TYPELIST", $check)) {
+					foreach($data[$id] as $key => $item) {
+						if (!$this->matchType($check["TYPELIST"], $item)) {
+							$this->error($info, "Inappropriate information ({$key})");
+						}
+					}
+				}
+
+				/* checar subitens */
+				if (array_key_exists("KEYS", $check)) {
+					$this->check($id);
+				}
 			}
-			if (!$this->isFile($file)) {
-				trigger_error("CONFIG[ID][{$id}]: No file found.");
-				exit;
-			}
+
 		}
 
-
-		/* LOG: informações sobre autenticação (facultativo) [array] */
-		if (!array_key_exists("LOG", $this->CONFIG)) {
-			return $this->CONFIG["LOG"] = null;
-		}
-		if (gettype($this->CONFIG["LOG"]) !== "array") {
-			trigger_error("CONFIG[LOG]: Inappropriate information.");
-			exit;
-		}
-
-
-		/* LOG.GATEWAY: página de credenciais para autenticação (obrigatório) [string:file] */
-		if (!array_key_exists("GATEWAY", $this->CONFIG["LOG"])) {
-			trigger_error("CONFIG[LOG][GATEWAY]: Information not provided.");
-			exit;
-		}
-		if (!$this->isFile($this->CONFIG["LOG"]["GATEWAY"])) {
-			trigger_error("CONFIG[LOG][GATEWAY]: No file found.");
-			exit;
-		}
-
-
-		/* LOG.DATA: lista contendo nome dos formulários de autenticação (obrigatório) [array]*/
-		if (!array_key_exists("DATA", $this->CONFIG["LOG"])) {
-			trigger_error("CONFIG[LOG][DATA]: Information not provided.");
-			exit;
-		}
-		if (gettype($this->CONFIG["LOG"]["DATA"]) !== "array") {
-			trigger_error("CONFIG[LOG][DATA]: Inappropriate information.");
-			exit;
-		}
-		if (count($this->CONFIG["LOG"]["DATA"]) === 0) {
-			trigger_error("CONFIG[LOG][DATA]: Insufficient data.");
-			exit;
-		}
-
-
-		/* LOG.LOGIN: nome da função que checará as credenciais (obrigatório) [string:function] */
-		if (!array_key_exists("LOGIN", $this->CONFIG["LOG"])) {
-			trigger_error("CONFIG[LOG][LOGIN]: Information not provided.");
-			exit;
-		}
-		if (gettype($this->CONFIG["LOG"]["LOGIN"]) !== "string") {
-			trigger_error("CONFIG[LOG][LOGIN]: Inappropriate information.");
-			exit;
-		}
-		if (!is_callable($this->CONFIG["LOG"]["LOGIN"])) {
-			trigger_error("CONFIG[LOG][LOGIN]: Function/method not found.");
-			exit;
-		}
-
-
-		/* LOG.LOAD: nome da função que checará o acesso à página (facultativo) [string:function] */
-		if (array_key_exists("LOAD", $this->CONFIG["LOG"])) {
-			if (gettype($this->CONFIG["LOG"]["LOAD"]) !== "string") {
-				trigger_error("CONFIG[LOG][LOAD]: Inappropriate information.");
-				exit;
-			}
-			if (!is_callable($this->CONFIG["LOG"]["LOAD"])) {
-				trigger_error("CONFIG[LOG][LOAD]: Function/method not found.");
-				exit;
-			}
-		} else {
-			$this->CONFIG["LOG"]["LOAD"] = null;
-		}
-
-
-		/* LOG.TIME: tempo, em segundos, entre páginas (facultativo) [integer] */
-		if (array_key_exists("TIME", $this->CONFIG["LOG"])) {
-			if (gettype($this->CONFIG["LOG"]["TIME"]) !== "integer") {
-				trigger_error("CONFIG[LOG][TIME]: Inappropriate information.");
-				exit;
-			}
-			if ($this->CONFIG["LOG"]["TIME"] < 1) {
-				trigger_error("CONFIG[LOG][TIME]: Inappropriate time interval.");
-				exit;
-			}
-		} else {
-			$this->CONFIG["LOG"]["TIME"] = null;
-		}
-
-		return;
 	}
 
 /*----------------------------------------------------------------------------*/
@@ -257,8 +254,35 @@ class Driver {
 	private function isFile($path) {
 		/* verifica se o argumento é um caminho de arquivo válido (boolean) */
 		if (gettype($path) !== "string") {return false;}
-		if (!is_file($path)) {return false;}
-		return true;
+		return is_file($path) ? true : false;
+	}
+
+/*----------------------------------------------------------------------------*/
+	private function error($root, $msg) {
+		/* exibe uma mensagem de erro e para a interpretação */
+		trigger_error("Driver (<code>{$root}</code>): {$msg} ");
+		exit;
+	}
+
+/*----------------------------------------------------------------------------*/
+	private function isFunction($name) {
+		/* verifica se a informação é uma função possível de chamar (boolean) */
+		if (gettype($name) !== "string") {return false;}
+		return is_callable($name) ? true : false;
+	}
+
+/*----------------------------------------------------------------------------*/
+	private function matchType($type, $value) {
+		/* verifica se o valor confere com o tipo informado (boolean) */
+		switch($type) {
+			case "file":
+				if ($this->isFile($value))    {return true;}
+			case "function":
+				if($this->isFunction($value)) {return true;}
+			default:
+				if ($type === gettype($value)) {return true;}
+		}
+		return false;
 	}
 
 /*----------------------------------------------------------------------------*/
@@ -295,14 +319,18 @@ class Driver {
 	private function login() {
 		/* informa se o usuário está pedindo autenticação (boolean) */
 
+		/* se o método não for POST, não está solicitando autenticação */
+		if ($_SERVER["REQUEST_METHOD"] !== "POST") {return false;}
+
 		/* se não exigir altenticação, não tem o que verificar */
 		if ($this->CONFIG["LOG"] === null) {return false;}
 
 		/* se já autenticado, não há como solicitar autenticação */
 		if ($this->log()) {return false;}
 
-		/* checar se a última página foi de login */
-		if ($this->lastRequest("PAGE") !== $this->CONFIG["LOG"]["GATEWAY"]) {return false;}
+		/* checar se a última página foi de login ou null */
+		$last = $this->lastRequest("PATH");
+		if ($last !== null && $last !== $this->CONFIG["LOG"]["GATEWAY"]) {return false;}
 
 		/* checar se os dados do POST conferem com os da autenticação (LOG.DATA) */
 		if (count($_POST) !== count($this->CONFIG["LOG"]["DATA"])) {return false;}
@@ -318,8 +346,8 @@ class Driver {
 	private function logout() {
 		/* encerra a sessão */
 		if (isset($_SESSION)) {
-			session_unset();
 			session_destroy();
+			$this->start();
 		}
 		return;
 	}
@@ -440,7 +468,7 @@ class Driver {
 		$load = $this->CONFIG["LOG"]["LOAD"];
 		if ($load !== null) {
 			$user  = $_SESSION["__DRIVER__"]["USER"];
-			$check = call_user_func($load, $user, $path);
+			$check = call_user_func($load, $user, $id, $path);
 			if ($check !== true) {
 				$this->STATUS = 5;
 				return $this->CONFIG["HOME"];
@@ -455,25 +483,50 @@ class Driver {
 /*----------------------------------------------------------------------------*/
 	public function path() {
 		/* avalia e conduz a rota a ser exibida */
-		$log = $this->CONFIG["LOG"];
+
+		/* definir chamada de PATH (só poderá chamar uma vez) */
+		if ($this->PATH === true) {
+			$this->error("path()", "Method can only be called once.");
+		} else {
+			$this->PATH = true;
+		}
+
+		/* registrando evento */
+		$log  = $this->CONFIG["LOG"];
 		$path = $log === null ? $this->freeAccess() : $this->restrictedAccess();
+		$page = $this->STATUS === 5 ? $this->CONFIG["ID"][$this->id()] : $path;
+		$this->history($page, $path);
+
 
 		/* FIXME checar eventos e ver quando chamar logout */
 
-		/* definir registros */
-		if (gettype($_SESSION["__DRIVER__"]["LOG"]) !== "array") {
-			$_SESSION["__DRIVER__"]["LOG"] = array();
+
+		/* casos para limpar sessão */
+		if (in_array($this->STATUS, array(1, 2, 7, 8))) {
+			$this->logout();
 		}
-
-		$_SESSION["__DRIVER__"]["LOG"][] = array(
-			"PAGE"   => $path,
-			"TIME"   => $this->time(),
-			"STATUS" => $this->STATUS
-		);
-
 
 		/* retornar rota */
 		return $path;
+	}
+
+/*----------------------------------------------------------------------------*/
+	private function history($page, $path) {
+		/* registra o histórico de navegação */
+		$user  = $this->CONFIG["LOG"] === null ? false : true;
+		$index = $_SERVER["SCRIPT_NAME"];
+
+		$_SESSION["__DRIVER__"]["LOG"][] = array(
+			"INDEX"  => $index,             /* módulo do sistema utilizado */
+			"USER"   => $user,              /* se precisa de autenticação */
+			"PAGE"   => $page,              /* página desejada */
+			"PATH"   => $path,              /* página definida */
+			"TIME"   => $this->time(),      /* registro, em segundos, do momento da ação */
+			"DATE"   => $this->time(true),  /* data e hora da ação em formato ISO */
+			"STATUS" => $this->status(),    /* número do status */
+			"INFO"   => $this->status(true) /* informação do estatus */
+		);
+		return;
 	}
 
 /*----------------------------------------------------------------------------*/
@@ -491,19 +544,30 @@ class Driver {
 /*----------------------------------------------------------------------------*/
 	public function debug($print = false) {
 		/* retorna ou imprime os dados de sessão e de configuração */
-		$status = $this->status(true);
+		$data = array();
+		$data["CONFIG"]  = array();
+		$data["CONFIG"]["HOME"] = $this->CONFIG["HOME"];
+		$data["CONFIG"]["ID"]   = $this->CONFIG["ID"];
+		$data["CONFIG"]["LOG"]  = $this->CONFIG["LOG"];
+		if ($data["CONFIG"]["LOG"] !== null) {
+			$data["CONFIG"]["LOG"] = array();
+			$data["CONFIG"]["LOG"]["GATEWAY"] = $this->CONFIG["LOG"]["GATEWAY"];
+			$data["CONFIG"]["LOG"]["DATA"]    = $this->CONFIG["LOG"]["DATA"];
+			$data["CONFIG"]["LOG"]["LOGIN"]   = $this->CONFIG["LOG"]["LOGIN"];
+			$data["CONFIG"]["LOG"]["LOAD"]    = $this->CONFIG["LOG"]["LOAD"];
+			$data["CONFIG"]["LOG"]["TIME"]    = $this->CONFIG["LOG"]["TIME"];
+		}
+		$json = str_replace("\\", "", json_encode($data["CONFIG"]));
 
-		$data = array(
-			"CONFIG"   => $this->CONFIG,
-			"JSON"     => json_encode($this->CONFIG),
-			"STATUS"   => "{$this->STATUS}: {$status}",
-			"_SESSION" => $_SESSION
-		);
+		$data["STATUS"]  = $this->status();
+		$data["INFO"]    = $this->status(true);
+		$data["SESSION"] = $_SESSION["__DRIVER__"];
+		$data["JSON"]    = $json;
 
 		if ($print === true) {
-			echo "<pre>";
+			echo "<hr/>\n<pre style=\"color: #FFFFFF; background-color: #000000; white-space: pre-wrap\">";
 			print_r($data);
-			echo "</pre>";
+			echo "</pre>\n<hr/>";
 		}
 		return $data;
 	}
