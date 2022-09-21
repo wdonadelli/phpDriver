@@ -54,39 +54,48 @@ class Driver {
 		9 => "MODIFIED ROUTE"
 	);
 	private $STRUCT = array(     /* registra restrições de CONFIG */
-		"HOME" => array(
+		"CHECK" => array( /* informa se deseja checar os dados de configuração */
+			"REQUIRED" => false,
+			"TYPE"     => "boolean"
+		),
+		"HOME" => array( /* informa a página principal */
 			"REQUIRED" => true,
 			"TYPE"     => "file"
 		),
-		"ID" => array(
+		"ID" => array( /* informa os identificadores e suas páginas secundárias */
 			"REQUIRED" => true,
 			"TYPE"     => "array",
 			"BADKEYS"  => array("HOME", "EXIT"),
 			"TYPELIST" => "file"
 		),
-		"LOG" => array(
+		"TRIGGERS" => array ( /* informa os acionadores a partir do STATUS da requisição */
+			"REQUIRED" => false,
+			"TYPE"     => "array",
+			"TYPELIST" => "function"
+		),
+		"LOG" => array( /* informações sobre a autenticação, se for o caso */
 			"REQUIRED" => false,
 			"TYPE"     => "array",
 			"KEYS"     => array(
-				"GATEWAY" => array(
+				"GATEWAY" => array( /* página de autenticação e de checagem */
 					"REQUIRED" => true,
 					"TYPE"     => "file"
 				),
-				"DATA" => array(
+				"DATA" => array( /* nome dos formulários que receberão os dados de autenticação */
 					"REQUIRED" => true,
 					"TYPE"     => "array",
 					"SIZE"     => 1,
 					"TYPELIST" => "string"
 				),
-				"LOGIN" => array(
+				"LOGIN" => array( /* função que fará a autenticação */
 					"REQUIRED" => true,
 					"TYPE"     => "function"
 				),
-				"LOAD" => array(
+				"LOAD" => array( /* função que fará a checagem a cada acesso */
 					"REQUIRED" => false,
 					"TYPE"     => "function"
 				),
-				"TIME" => array(
+				"TIME" => array( /* intervalos de tempo, em segundos, permitido entre requisições */
 					"REQUIRED" => false,
 					"TYPE"     => "integer",
 					"SIZE"     => 1
@@ -272,13 +281,22 @@ class Driver {
 	}
 
 /*----------------------------------------------------------------------------*/
+	private function isBoolean($name) {
+		/* verifica se a informação é booleana (boolean) */
+		if ($name === true || $name === false) {return true;}
+		return false;
+	}
+
+/*----------------------------------------------------------------------------*/
 	private function matchType($type, $value) {
 		/* verifica se o valor confere com o tipo informado (boolean) */
 		switch($type) {
 			case "file":
-				if ($this->isFile($value))    {return true;}
+				if ($this->isFile($value))     {return true;}
 			case "function":
-				if($this->isFunction($value)) {return true;}
+				if($this->isFunction($value))  {return true;}
+			case "boolean":
+				if($this->isBoolean($value))   {return true;}
 			default:
 				if ($type === gettype($value)) {return true;}
 		}
@@ -346,6 +364,7 @@ class Driver {
 	private function logout() {
 		/* encerra a sessão */
 		if (isset($_SESSION)) {
+			session_unset();
 			session_destroy();
 			$this->start();
 		}
@@ -491,20 +510,23 @@ class Driver {
 			$this->PATH = true;
 		}
 
-		/* registrando evento */
+		/* obtendo resultado da requisição */
 		$log  = $this->CONFIG["LOG"];
 		$path = $log === null ? $this->freeAccess() : $this->restrictedAccess();
 		$page = $this->STATUS === 5 ? $this->CONFIG["ID"][$this->id()] : $path;
+
+		/* verificando se é o caso de limpar a sessão (ver STATUS) */
+		if (in_array($this->STATUS, array(1, 2, 7, 8))) {
+			$this->logout();
+		}
+
+		/* registrando histórico de navegação no log */
 		$this->history($page, $path);
 
 
 		/* FIXME checar eventos e ver quando chamar logout */
 
 
-		/* casos para limpar sessão */
-		if (in_array($this->STATUS, array(1, 2, 7, 8))) {
-			$this->logout();
-		}
 
 		/* retornar rota */
 		return $path;
@@ -518,7 +540,7 @@ class Driver {
 
 		$_SESSION["__DRIVER__"]["LOG"][] = array(
 			"INDEX"  => $index,             /* módulo do sistema utilizado */
-			"USER"   => $user,              /* se precisa de autenticação */
+			"USER"   => $this->log(),       /* acesso com usuário logado */
 			"PAGE"   => $page,              /* página desejada */
 			"PATH"   => $path,              /* página definida */
 			"TIME"   => $this->time(),      /* registro, em segundos, do momento da ação */
@@ -528,6 +550,13 @@ class Driver {
 		);
 		return;
 	}
+
+
+
+
+
+
+/* ================= FUNÇÕES ACESSÍVEIS FORA DO OBJETO =======================*/
 
 /*----------------------------------------------------------------------------*/
 	public function status($text = false) {
@@ -546,9 +575,12 @@ class Driver {
 		/* retorna ou imprime os dados de sessão e de configuração */
 		$data = array();
 		$data["CONFIG"]  = array();
-		$data["CONFIG"]["HOME"] = $this->CONFIG["HOME"];
-		$data["CONFIG"]["ID"]   = $this->CONFIG["ID"];
-		$data["CONFIG"]["LOG"]  = $this->CONFIG["LOG"];
+		$data["CONFIG"]["CHECK"]    = $this->CONFIG["CHECK"];
+		$data["CONFIG"]["HOME"]     = $this->CONFIG["HOME"];
+		$data["CONFIG"]["ID"]       = $this->CONFIG["ID"];
+		$data["CONFIG"]["ID"]       = $this->CONFIG["ID"];
+		$data["CONFIG"]["TRIGGERS"] = $this->CONFIG["TRIGGERS"];
+		$data["CONFIG"]["LOG"]      = $this->CONFIG["LOG"];
 		if ($data["CONFIG"]["LOG"] !== null) {
 			$data["CONFIG"]["LOG"] = array();
 			$data["CONFIG"]["LOG"]["GATEWAY"] = $this->CONFIG["LOG"]["GATEWAY"];
@@ -557,12 +589,9 @@ class Driver {
 			$data["CONFIG"]["LOG"]["LOAD"]    = $this->CONFIG["LOG"]["LOAD"];
 			$data["CONFIG"]["LOG"]["TIME"]    = $this->CONFIG["LOG"]["TIME"];
 		}
-		$json = str_replace("\\", "", json_encode($data["CONFIG"]));
-
 		$data["STATUS"]  = $this->status();
 		$data["INFO"]    = $this->status(true);
 		$data["SESSION"] = $_SESSION["__DRIVER__"];
-		$data["JSON"]    = $json;
 
 		if ($print === true) {
 			echo "<hr/>\n<pre style=\"color: #FFFFFF; background-color: #000000; white-space: pre-wrap\">";
@@ -570,6 +599,41 @@ class Driver {
 			echo "</pre>\n<hr/>";
 		}
 		return $data;
+	}
+
+/*----------------------------------------------------------------------------*/
+	public function json($print = false) {
+		/* retorna ou imprime dados de configuração em formato JSON */
+		$data = $this->debug();
+		$json = json_encode($data["CONFIG"]);
+
+		if ($json === false) {
+			$this->error("json()", "Error encoding data to JSON");
+			return null;
+		}
+
+		$json = str_replace("\\", "", $json);
+		$json = str_replace("}}", "\n\t}\n}", $json);
+		$json = str_replace("\",\"", "\", \"", $json);
+		$srpl = array(
+			"CHECK"   => 0, "HOME" => 0, "ID"    => 0, "LOG"  => 0, "TRIGGERS" => 0,
+			"GATEWAY" => 1, "DATA" => 1, "LOGIN" => 1, "LOAD" => 1, "TIME"     => 1
+		);
+
+		foreach ($srpl as $key => $type) {
+			if ($type === 0) {
+				$json = str_replace("\"{$key}\":", "\n\t\"{$key}\": ", $json);
+			} elseif ($type === 1) {
+				$json = str_replace("\"{$key}\":", "\n\t\t\"{$key}\": ", $json);
+			}
+		}
+
+		if ($print === true) {
+			echo "<hr/>\n<pre style=\"color: #FFFFFF; background-color: #000000; white-space: pre-wrap\">";
+			print_r($json);
+			echo "</pre>\n<hr/>";
+		}
+		return $json;
 	}
 
 }

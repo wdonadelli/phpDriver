@@ -1,28 +1,16 @@
 <main>
 
-	<form method="post" action="?" >
 
-		<div>
-			<label for="usr">User identifier:</label>
-		</div>
-
-		<div>
-			<input type="text" name="usr" id="usr" required="" autofocus="" autocomplete="off" />
-		</div>
-
-		<div>
-			<label for="pwd">Password:</label>
-		</div>
-
-		<div>
-			<input type="password" name="pwd" id="pwd" required="" autofocus="" autocomplete="off" />
-		</div>
-
-		<div>
-			<button type="submit">Go</button>
-		</div>
-
+	<form method="post" action="?" id="login" >
+		<label for="usr">User identifier:</label>
+		<input type="text" name="usr" id="usr" required="" autofocus="" autocomplete="off" />
+		<label for="pwd">Password:</label>
+		<input type="password" name="pwd" id="pwd" required="" autofocus="" autocomplete="off" />
+		<button type="submit">Go</button>
 	</form>
+
+
+
 
 	<h4>Users</h4>
 
