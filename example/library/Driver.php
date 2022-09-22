@@ -23,13 +23,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ------------------------------------------------------------------------------*/
 
-/*------------------------------------------------------------------------------
-// para efetuar testes na biblioteca
+/* para efetuar testes na biblioteca (desligar na produção) */
+define("PHPDRIVER_SHOW_ERRORS", 1);
 
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-------------------------------------------------------------------------------*/
+if (PHPDRIVER_SHOW_ERRORS === 1) {
+	ini_set('display_errors', 1);
+	ini_set('display_startup_errors', 1);
+	error_reporting(E_ALL);
+}
+
+/*----------------------------------------------------------------------------*/
 
 class Driver {
 
@@ -180,8 +183,10 @@ class Driver {
 			$this->error("CONFIG", "Inappropriate argument");
 		}
 
-		/* checar dados de CONFIG */
-		$this->check();
+		/* checar dados de CONFIG, se assim estiver definido */
+		if (!array_key_exists("CHECK", $this->CONFIG) || $this->CONFIG["CHECK"] !== false) {
+			$this->check();
+		}
 
 		return;
 	}
