@@ -9,7 +9,7 @@
 		"GATEWAY": "content/login.php",
 		"DATA":    ["usr", "pwd"],
 		"LOGIN":   "credentialChecker",
-		"LOAD":   "accessChecker",
+		"ALLOW":   "accessChecker",
 		"TIME":    180
 	}
 }

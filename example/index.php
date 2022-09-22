@@ -20,7 +20,7 @@ $path = $driver->path();
 /* Getting the status message and debug data */
 $status = $driver->status(true);
 $debug  = $driver->debug();
-//$driver->json(true);
+$driver->json(true);
 
 ?>
 <!DOCTYPE html>

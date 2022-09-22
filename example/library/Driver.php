@@ -40,7 +40,6 @@ class Driver {
 	private $CONFIG;             /* registra os dados de configuração */
 	private $STATUS;             /* regista o identificador do progresso */
 	private $PATH = false;       /* regista se método path já foi executado (só pode uma vez) */
-	private $TRIGGERS = array(); /* registra os acionadores do objeto */
 	private $EVENTS = array(     /* registra as fases da requisição */
 		0 => "SESSION STARTED",
 		1 => "AUTHENTICATION REQUIRED",
@@ -68,11 +67,6 @@ class Driver {
 			"BADKEYS"  => array("HOME", "EXIT"),
 			"TYPELIST" => "file"
 		),
-		"TRIGGERS" => array ( /* informa os acionadores a partir do STATUS da requisição */
-			"REQUIRED" => false,
-			"TYPE"     => "array",
-			"TYPELIST" => "function"
-		),
 		"LOG" => array( /* informações sobre a autenticação, se for o caso */
 			"REQUIRED" => false,
 			"TYPE"     => "array",
@@ -91,7 +85,11 @@ class Driver {
 					"REQUIRED" => true,
 					"TYPE"     => "function"
 				),
-				"LOAD" => array( /* função que fará a checagem a cada acesso */
+				"ALLOW" => array( /* função que fará a checagem a cada acesso */
+					"REQUIRED" => false,
+					"TYPE"     => "function"
+				),
+				"LOAD" => array( /* função a ser chamada após definição da requisição  */
 					"REQUIRED" => false,
 					"TYPE"     => "function"
 				),
@@ -484,10 +482,10 @@ class Driver {
 		$path = $this->CONFIG["ID"][$id];
 
 		/* acesso não permitido: HOME */
-		$load = $this->CONFIG["LOG"]["LOAD"];
-		if ($load !== null) {
+		$allow = $this->CONFIG["LOG"]["ALLOW"];
+		if ($allow !== null) {
 			$user  = $_SESSION["__DRIVER__"]["USER"];
-			$check = call_user_func($load, $user, $id, $path);
+			$check = call_user_func($allow, $user, $id, $path);
 			if ($check !== true) {
 				$this->STATUS = 5;
 				return $this->CONFIG["HOME"];
@@ -540,7 +538,7 @@ class Driver {
 
 		$_SESSION["__DRIVER__"]["LOG"][] = array(
 			"INDEX"  => $index,             /* módulo do sistema utilizado */
-			"USER"   => $this->log(),       /* acesso com usuário logado */
+			"LOGIN"  => $this->log(),       /* acesso com usuário logado */
 			"PAGE"   => $page,              /* página desejada */
 			"PATH"   => $path,              /* página definida */
 			"TIME"   => $this->time(),      /* registro, em segundos, do momento da ação */
@@ -550,10 +548,6 @@ class Driver {
 		);
 		return;
 	}
-
-
-
-
 
 
 /* ================= FUNÇÕES ACESSÍVEIS FORA DO OBJETO =======================*/
@@ -572,52 +566,51 @@ class Driver {
 
 /*----------------------------------------------------------------------------*/
 	public function debug($print = false) {
-		/* retorna ou imprime os dados de sessão e de configuração */
-		$data = array();
-		$data["CONFIG"]  = array();
-		$data["CONFIG"]["CHECK"]    = $this->CONFIG["CHECK"];
-		$data["CONFIG"]["HOME"]     = $this->CONFIG["HOME"];
-		$data["CONFIG"]["ID"]       = $this->CONFIG["ID"];
-		$data["CONFIG"]["ID"]       = $this->CONFIG["ID"];
-		$data["CONFIG"]["TRIGGERS"] = $this->CONFIG["TRIGGERS"];
-		$data["CONFIG"]["LOG"]      = $this->CONFIG["LOG"];
-		if ($data["CONFIG"]["LOG"] !== null) {
-			$data["CONFIG"]["LOG"] = array();
-			$data["CONFIG"]["LOG"]["GATEWAY"] = $this->CONFIG["LOG"]["GATEWAY"];
-			$data["CONFIG"]["LOG"]["DATA"]    = $this->CONFIG["LOG"]["DATA"];
-			$data["CONFIG"]["LOG"]["LOGIN"]   = $this->CONFIG["LOG"]["LOGIN"];
-			$data["CONFIG"]["LOG"]["LOAD"]    = $this->CONFIG["LOG"]["LOAD"];
-			$data["CONFIG"]["LOG"]["TIME"]    = $this->CONFIG["LOG"]["TIME"];
-		}
-		$data["STATUS"]  = $this->status();
-		$data["INFO"]    = $this->status(true);
-		$data["SESSION"] = $_SESSION["__DRIVER__"];
+		/* retorna ou imprime os dados de sessão */
 
 		if ($print === true) {
 			echo "<hr/>\n<pre style=\"color: #FFFFFF; background-color: #000000; white-space: pre-wrap\">";
-			print_r($data);
+			print_r($_SESSION["__DRIVER__"]);
 			echo "</pre>\n<hr/>";
 		}
-		return $data;
+
+		return $_SESSION["__DRIVER__"];
 	}
 
 /*----------------------------------------------------------------------------*/
 	public function json($print = false) {
 		/* retorna ou imprime dados de configuração em formato JSON */
-		$data = $this->debug();
-		$json = json_encode($data["CONFIG"]);
+
+		/* obtendo informações de CONFIG */
+		$data = array(
+			"CHECK" => $this->CONFIG["CHECK"],
+			"HOME"  => $this->CONFIG["HOME"],
+			"ID"    => $this->CONFIG["ID"],
+			"LOG"   => $this->CONFIG["LOG"] === null ? null : array(
+				"GATEWAY" => $this->CONFIG["LOG"]["GATEWAY"],
+				"DATA"    => $this->CONFIG["LOG"]["DATA"],
+				"LOGIN"   => $this->CONFIG["LOG"]["LOGIN"],
+				"ALLOW"   => $this->CONFIG["LOG"]["ALLOW"],
+				"LOAD"    => $this->CONFIG["LOG"]["LOAD"],
+				"TIME"    => $this->CONFIG["LOG"]["TIME"]
+			)
+		);
+
+		/* decodificando para JSON */
+		$json = json_encode($data);
 
 		if ($json === false) {
 			$this->error("json()", "Error encoding data to JSON");
 			return null;
 		}
 
+		/* fazendo umas substituições para melhor visualização */
 		$json = str_replace("\\", "", $json);
 		$json = str_replace("}}", "\n\t}\n}", $json);
 		$json = str_replace("\",\"", "\", \"", $json);
 		$srpl = array(
-			"CHECK"   => 0, "HOME" => 0, "ID"    => 0, "LOG"  => 0, "TRIGGERS" => 0,
-			"GATEWAY" => 1, "DATA" => 1, "LOGIN" => 1, "LOAD" => 1, "TIME"     => 1
+			"CHECK"   => 0, "HOME"  => 0, "ID"    => 0, "LOG"  => 0, "GATEWAY" => 1,
+			"DATA"    => 1, "LOGIN" => 1, "ALLOW" => 1, "LOAD" => 1, "TIME"    => 1
 		);
 
 		foreach ($srpl as $key => $type) {
