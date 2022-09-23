@@ -1,10 +1,11 @@
 {
-	"CHECK": false,
-	"HOME":  "cfontent/home.php",
+	"CHECK": true,
+	"HOME":  "content/home.php",
 	"ID": {
-		"page1": "content/file1.php",
-		"page2": "content/file2.php",
-		"page3": "content/file3.php"
+		"config": "content/config.php",
+		"debug":  "content/debug.php",
+		"only1":  "content/only1.php",
+		"only2":  "content/only2.php"
 	},
 	"LOG": {
 		"GATEWAY": "content/login.php",

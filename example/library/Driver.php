@@ -106,7 +106,8 @@ class Driver {
 	);
 	private $SESSION = array( /* Dados de sessão SESSION[__DRIVER__] */
 		"USER" => null,   /* dados do usuário (fixo) [mixed] */
-		"TIME" => null,   /* momento do login (fixo) [string] */
+		"TIME" => null,   /* momento do login (fixo) [integer] */
+		"DATE" => null,   /* momento do login (fixo) [string] */
 		"HASH" => null,   /* identificador do login (fixo) [string] */
 		"LOG"  => array() /* histórico de ações (variável) [array] */
 	);
@@ -284,13 +285,6 @@ class Driver {
 	}
 
 /*----------------------------------------------------------------------------*/
-	private function isBoolean($name) {
-		/* verifica se a informação é booleana (boolean) */
-		if ($name === true || $name === false) {return true;}
-		return false;
-	}
-
-/*----------------------------------------------------------------------------*/
 	private function matchType($type, $value) {
 		/* verifica se o valor confere com o tipo informado (boolean) */
 		switch($type) {
@@ -298,8 +292,6 @@ class Driver {
 				if ($this->isFile($value))     {return true;}
 			case "function":
 				if($this->isFunction($value))  {return true;}
-			case "boolean":
-				if($this->isBoolean($value))   {return true;}
 			default:
 				if ($type === gettype($value)) {return true;}
 		}
@@ -314,11 +306,13 @@ class Driver {
 		if ($this->CONFIG["LOG"] === null)            {return null;}
 		if ($_SESSION["__DRIVER__"]["USER"] === null) {return null;}
 		if ($_SESSION["__DRIVER__"]["TIME"] === null) {return null;}
+		if ($_SESSION["__DRIVER__"]["DATE"] === null) {return null;}
 
 		/* definindo dados do hash */
 		$hash = array(
 			"USER" => $_SESSION["__DRIVER__"]["USER"],
-			"TIME" => $_SESSION["__DRIVER__"]["TIME"]
+			"TIME" => $_SESSION["__DRIVER__"]["TIME"],
+			"DATE" => $_SESSION["__DRIVER__"]["DATE"]
 		);
 
 		return md5(json_encode($hash));
@@ -386,7 +380,8 @@ class Driver {
 
 		/* em caso de sucesso, definir dados da sessão */
 		$_SESSION["__DRIVER__"]["USER"] = $user;
-		$_SESSION["__DRIVER__"]["TIME"] = $this->time(true);
+		$_SESSION["__DRIVER__"]["TIME"] = $this->time();
+		$_SESSION["__DRIVER__"]["DATE"] = $this->time(true);
 		$_SESSION["__DRIVER__"]["HASH"] = $this->hash();
 
 		return true;
@@ -524,7 +519,7 @@ class Driver {
 		}
 
 		/* registrando histórico de navegação no log */
-		$this->history($page, $path);
+		$this->history($path);
 
 
 		/* FIXME checar eventos e ver quando chamar logout */
@@ -536,14 +531,17 @@ class Driver {
 	}
 
 /*----------------------------------------------------------------------------*/
-	private function history($page, $path) {
+	private function history($path) {
 		/* registra o histórico de navegação */
-		$user  = $this->CONFIG["LOG"] === null ? false : true;
+		$id    = $this->id();
+		$ID    = $this->CONFIG["ID"];
+		$page  = ($id === null || !array_key_exists($id, $ID)) ? null : $ID[$id];
 		$index = $_SERVER["SCRIPT_NAME"];
 
 		$_SESSION["__DRIVER__"]["LOG"][] = array(
 			"INDEX"  => $index,             /* módulo do sistema utilizado */
 			"LOGIN"  => $this->log(),       /* acesso com usuário logado */
+			"ID"     => $id,                /* identificador informado */
 			"PAGE"   => $page,              /* página desejada */
 			"PATH"   => $path,              /* página definida */
 			"TIME"   => $this->time(),      /* registro, em segundos, do momento da ação */

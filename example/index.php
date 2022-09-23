@@ -10,73 +10,48 @@ $driver = new Driver("library/config.json");
 /* Getting the file path: */
 $path = $driver->path();
 
-//$driver->path();
-
 /* Getting the status message and debug data */
-$status = $driver->status(true);
-$debug  = $driver->debug();
-$driver->json(true);
+$tstatus = $driver->status(true);
+$nstatus = $driver->status();
 
 ?>
 <!DOCTYPE html>
-<html>
+<html class="wd">
 
 	<head>
-		<title> -- phpDriver Example -- </title>
+		<title> -- phpDriver -- </title>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1"/>
 		<meta name="keywords" content="phpDriver" />
 		<meta name="author" content="Willian Donadelli"/>
 		<meta name="description" content="phpDriver" />
 		<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-		<style>
-		*, *:before, *:after {box-sizing: border-box;}
-		body {
-			background-color: snow;
-			font-size: 15px;
-		}
-		#login {
-			margin: 100px auto;
-			width: 50%
-		}
-		#login label, #login input, #login button {
-			display: block;
-			width: 100%;
-			padding: 5px;
-			text-align: center;
-			font-size: 15px;
-		}
-		#login input, #login button {
-			margin: 0 0 5px 0;
-			background-color: silver;
-			color: green;
-		}
-		#header, #header a {
-			background-color: royalblue;
-			color: white;
-			padding: 5px;
-			font-size: 1.2em
-		}
-		#status {
-			color: purple;
-			padding: 5px;
-			background-color: yellow;
-			margin: 10px;
-			border: 1px solid;
-			border-radius: 0.5em;
-		}
-
+		<link  href="library/wd4.css" rel="stylesheet" />
 		</style>
 	</head>
 
-	<body>
+	<body class="wd-flyer wd-bg-black">
 
-		<header id="header">
-			<h3><a href="?" title="Home Page" >phpDriver</a></h3>
+		<header class="wd-bg-blue">
+			<h1>phpDriver</h1>
+<?php
+if ($nstatus > 2 && $nstatus < 7) {
+	echo "
+		<nav class=\"wd-bg-grey\">
+			<a href=\"?id=HOME\">Home</a>
+			<a href=\"?id=debug\">Debug</a>
+			<a href=\"?id=config\">Config</a>
+			<a href=\"?id=?\">Unknown</a>
+			<a href=\"?id=only1\">Only 1</a>
+			<a href=\"?id=only2\">Only 2</a>
+			<a href=\"?id=EXIT\" class=\"wd-nav-right wd-icon-exit\"> Exit</a>
+		</nav>
+	";
+}
+?>
 		</header>
-
-		<section id="status">
-			<samp>STATUS: <?php echo $status; ?></samp>
+		<section class="wd-bg-yellow wd-border wd-radius wd-padd wd-size-smaller">
+			<samp>STATUS: <?php echo "{$nstatus} ({$tstatus})"; ?></samp>
 		</section>
 
 <?php

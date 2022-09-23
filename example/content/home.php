@@ -1,14 +1,12 @@
 <main>
+
 	<header>
-		<h4>Home</h4>
+		<h3>Home</h3>
 	</header>
 
-	<dl>
-		<dt>Path</dt>
-		<dd><a href="?id=page1">Page 1</a></dd>
-		<dd><a href="?id=page2">Page 2</a></dd>
-		<dd><a href="?id=page3">Page 3</a></dd>
-		<dd><a href="?id=EXIT">Exit</a></dd>
-	</dl>
+	<section>
+		<p>This main page is defined in the <code>HOME</code> key.</p>
+		<p>Maximum time between requests is <time datetime="00:03">3 minutes</time> if access is restricted.</p>
+	</section>
 
 </main>

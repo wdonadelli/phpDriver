@@ -6,14 +6,14 @@ $USERS = array(
 	"user1"  => array (
 		"pwd"  => "123456",
 		"data" => array(
-			"level" => array("page1", "page2"),
+			"level" => array("log", "config", "debug", "only1"),
 			"name"  => "User 1"
 		)
 	),
 	"user2"  => array(
 		"pwd"  => "654321",
 		"data" => array(
-			"level" => array("page1", "page3"),
+			"level" => array("log", "config", "debug", "only2"),
 			"name"  => "User 2"
 		)
 	)
