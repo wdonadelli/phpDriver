@@ -343,9 +343,8 @@ class Driver {
 		/* se já autenticado, não há como solicitar autenticação */
 		if ($this->log()) {return false;}
 
-		/* checar se a última página foi de login ou null */
-		$last = $this->lastRequest("PATH");
-		if ($last !== null && $last !== $this->CONFIG["LOG"]["GATEWAY"]) {return false;}
+		/* checar se a última página foi de login */
+		if ($this->lastRequest("PATH") !== $this->CONFIG["LOG"]["GATEWAY"]) {return false;}
 
 		/* checar se os dados do POST conferem com os da autenticação (LOG.DATA) */
 		if (count($_POST) !== count($this->CONFIG["LOG"]["DATA"])) {return false;}
@@ -362,7 +361,6 @@ class Driver {
 		/* encerra a sessão */
 		if (isset($_SESSION)) {
 			session_unset();
-			session_destroy();
 			$this->start();
 		}
 		return;
@@ -511,20 +509,33 @@ class Driver {
 		/* obtendo resultado da requisição */
 		$log  = $this->CONFIG["LOG"];
 		$path = $log === null ? $this->freeAccess() : $this->restrictedAccess();
-		$page = $this->STATUS === 5 ? $this->CONFIG["ID"][$this->id()] : $path;
 
-		/* verificando se é o caso de limpar a sessão (ver STATUS) */
-		if (in_array($this->STATUS, array(1, 2, 7, 8))) {
+		/* verificando se é o caso de limpar a sessão (STATUS sessão encerrada e sessão expirada) */
+		if (in_array($this->STATUS, array(7, 8))) {
 			$this->logout();
 		}
 
 		/* registrando histórico de navegação no log */
 		$this->history($path);
 
+		/* checar necessidade de desvio da página, exceto entradas e saídas */
+		if ($this->CONFIG["LOG"] !== null && $this->CONFIG["LOG"]["LOAD"] !== null) {
+			$load = call_user_func($this->CONFIG["LOG"]["LOAD"], $this->debug());
 
-		/* FIXME checar eventos e ver quando chamar logout */
+			/* se o retorno foi um arquivo válido, retorná-lo para path */
+			if ($this->isFile($load)) {
+				$this->STATUS = 9;
+				$this->history($load);
+				return $load;
+			}
 
-
+			/* se for um identificador, retornar o arquivo correspondete como path */
+			if (gettype($load) === "string" && array_key_exists($load, $this->CONFIG["ID"])) {
+				$this->STATUS = 9;
+				$this->history($this->CONFIG["ID"][$load]);
+				return $this->CONFIG["ID"][$load];
+			}
+		}
 
 		/* retornar rota */
 		return $path;
@@ -539,21 +550,18 @@ class Driver {
 		$index = $_SERVER["SCRIPT_NAME"];
 
 		$_SESSION["__DRIVER__"]["LOG"][] = array(
-			"INDEX"  => $index,             /* módulo do sistema utilizado */
-			"LOGIN"  => $this->log(),       /* acesso com usuário logado */
-			"ID"     => $id,                /* identificador informado */
-			"PAGE"   => $page,              /* página desejada */
-			"PATH"   => $path,              /* página definida */
-			"TIME"   => $this->time(),      /* registro, em segundos, do momento da ação */
-			"DATE"   => $this->time(true),  /* data e hora da ação em formato ISO */
-			"STATUS" => $this->status(),    /* número do status */
-			"INFO"   => $this->status(true) /* informação do estatus */
+			"INFO"   => $this->status(true), /* informação do estatus */
+			"ID"     => $id,                 /* identificador informado */
+			"PAGE"   => $page,               /* página desejada */
+			"PATH"   => $path,               /* página definida */
+			"INDEX"  => $index,              /* módulo do sistema utilizado */
+			"LOGIN"  => $this->log(),        /* acesso com usuário logado */
+			"STATUS" => $this->status(),     /* número do status */
+			"TIME"   => $this->time(),       /* registro, em segundos, do momento da ação */
+			"DATE"   => $this->time(true),   /* data e hora da ação em formato ISO */
 		);
 		return;
 	}
-
-
-/* ================= FUNÇÕES ACESSÍVEIS FORA DO OBJETO =======================*/
 
 /*----------------------------------------------------------------------------*/
 	public function status($text = false) {
@@ -611,6 +619,8 @@ class Driver {
 		$json = str_replace("\\", "", $json);
 		$json = str_replace("}}", "\n\t}\n}", $json);
 		$json = str_replace("\",\"", "\", \"", $json);
+		$json = str_replace("\"LOG\":null}", "\"LOG\": null\n}", $json);
+
 		$srpl = array(
 			"CHECK"   => 0, "HOME"  => 0, "ID"    => 0, "LOG"  => 0, "GATEWAY" => 1,
 			"DATA"    => 1, "LOGIN" => 1, "ALLOW" => 1, "LOAD" => 1, "TIME"    => 1
@@ -624,6 +634,7 @@ class Driver {
 			}
 		}
 
+		/* imprimindo, se for o caso, e retornando */
 		if ($print === true) {
 			echo "<hr/>\n<pre style=\"color: #FFFFFF; background-color: #000000; white-space: pre-wrap\">";
 			print_r($json);
@@ -634,3 +645,4 @@ class Driver {
 
 }
 ?>
+

@@ -1,5 +1,5 @@
 {
-	"CHECK": true,
+	"CHECK": false,
 	"HOME":  "content/home.php",
 	"ID": {
 		"config": "content/config.php",
@@ -7,11 +7,5 @@
 		"only1":  "content/only1.php",
 		"only2":  "content/only2.php"
 	},
-	"LOG": {
-		"GATEWAY": "content/login.php",
-		"DATA":    ["usr", "pwd"],
-		"LOGIN":   "credentialChecker",
-		"ALLOW":   "accessChecker",
-		"TIME":    180
-	}
+	"LOG": null
 }

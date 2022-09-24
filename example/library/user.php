@@ -19,15 +19,13 @@ $USERS = array(
 	)
 );
 
-
-
 /*============================================================================*/
 /* Function to check credentials */
 function credentialChecker($post) {
+
 	$usr = $post["usr"];
 	$psw = $post["pwd"];
 	global $USERS;
-
 
 	/* Failed authentication */
 	if (!array_key_exists($usr, $USERS)) {return null;}
@@ -39,10 +37,20 @@ function credentialChecker($post) {
 /*============================================================================*/
 /* Function to check access */
 function accessChecker($usr, $id, $path) {
+
 	/* Checks if the user has access to the id */
 	return in_array($id, $usr["level"]) ?  true : false;
 }
 
 /*============================================================================*/
+/* Function to check the need for route deviation */
+function loadChecker($debug) {
+	$length = count($debug["LOG"]) - 1;
+	$status = $debug["LOG"][$length]["STATUS"];
+	if ($status === 3) {return "content/hello.php";}
+	if ($status === 7) {return "content/bye.php";}
+	return null;
+}
+
 
 ?>
