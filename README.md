@@ -76,7 +76,7 @@ $config = array(
 Configuration data has the following properties:
 
 |Key|Subkey|Type|Optional|Description|
-|:.:|:----:|:--:|:------:|:----------|
+|:-:|:----:|:--:|:------:|:----------|
 |CHECK|-|Boolean|Yes|Indicates whether the tool should carry out a previous data check.|
 |HOME|-|String|No|Defines the path of the application's main page.|
 |ID|-|Array/Object|No|Contains the list of paths to application files defined from identifiers.|
