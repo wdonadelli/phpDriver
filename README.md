@@ -1,32 +1,106 @@
 # Driver
 
-It is a PHP library, represented by the object called __Driver__, whose purpose is to manage navigation routes from the URL and a pre-defined configuration structure.
+It is a PHP library with the purpose of managing navigation routes from the URL using a pre-defined configuration structure and a constructor object.
+
+By adjusting the configuration structure, it is possible to create free routes (without password) or restricted routes (with password); set maximum time between navigation; and add trigger for changing routes and checking authentication and access.
+
+The page to be displayed is defined through an identifier contained in the URL that will establish the route to the target file, without displaying its path.
+
+Authentication, access checking and route redirection are external functions, defined by the developer, which are called at certain moments of navigation that will subsidize the decision on the route to be taken.
+
+It is up to the developer to establish security regarding access to files and application data, it is up to the library only to indicate the route to be taken as configured.
+
+The tool is activated through the object named Driver.
 
 ## Constructor
 
 The constructor is defined as follows:
 
 ```php
-Driver($config, $force)
+Driver($config)
 ```
-|Argument|Type|Required|Default|Description|
-|:------:|:--:|:------:|:-----:|:----------|
-|config|String/Array|Yes|None|Configuration dataset containing the rules for navigation|
-|$force|Boolean|No|False|If true, will force the configuration data not to be verified.|
 
-By default, the builder will check the configuration data, including automatically assigning/correcting some non-mandatory information. If you find any inappropriate information in the required data, an error will be thrown and the application will crash.
+The `config` argument contains the configuration data for the navigation. This data can be in the form of an array or contained in a JSON file. Therefore, accepted argument types are a list of data (array) or the address of a JSON file (string).
 
-By setting the optional `force` argument to true, the constructor will not pre-check and will assume the same data coming from the `config` argument which, if set incorrectly, could cause unexpected navigation errors. However, it makes the procedure faster.
+Below are configuration examples in array and JSON formats:
 
-Therefore, if correctly configured the `config` argument, it is recommended to set the `force` argument to true. In this case, all data, including optional ones, must be informed.
+**JSON**
 
-Configuration data can be in the form of an array or contained in a JSON file. The `config` argument, therefore, can be a list of data or the address of the JSON file that contains the configuration data.
+```json
+{
+	"CHECK": true,
+	"HOME":  "content/home.php",
+	"ID": {
+		"config": "content/config.php",
+		"debug":  "content/debug.php",
+		"only1":  "content/only1.php",
+		"only2":  "content/only2.php"
+	},
+	"LOG": {
+		"GATEWAY": "content/login.php",
+		"DATA":    ["usr", "pwd"],
+		"LOGIN":   "credentialChecker",
+		"ALLOW":   "accessChecker",
+		"LOAD":    "loadChecker",
+		"TIME":    180
+	}
+}
+```
+
+**Array**
+
+```php
+
+$config = array(
+	"CHECK" => true,
+	"HOME"  => "content/home.php",
+	"ID"    => array(
+		"config" => "content/config.php",
+		"debug"  => "content/debug.php",
+		"only1"  => "content/only1.php",
+		"only2"  => "content/only2.php"
+	),
+	"LOG"   => array(
+		"GATEWAY" => "content/login.php",
+		"DATA"    => ["usr", "pwd"],
+		"LOGIN"   => "credentialChecker",
+		"ALLOW"   => "accessChecker",
+		"LOAD"    => "loadChecker",
+		"TIME"    => 180
+	)
+);
+```
 
 ## Configuration Data
 
-The navigation data are those that the `Driver` object will use to decide which direction the application should take.
+Configuration data has the following properties:
 
-The configuration is defined by the following keys `GATEWAY`, `TARGET`, `LOG`, `AUTH`, `CHECK` and `TIMEOUT` as follows.
+|Key|Subkey|Type|Optional|Description|
+|:.:|:----:|:--:|:------:|:----------|
+|CHECK|-|Boolean|Yes|Indicates whether the tool should carry out a previous data check.|
+|HOME|-|String|No|Defines the path of the application's main page.|
+|ID|-|Array/Object|No|Contains the list of paths to application files defined from identifiers.|
+|LOG|-|Array/Obeject|Yes|Informs if the application will require authentication.|
+|LOG|GATEWAY|String|No|Sets the authentication page path.|
+|LOG|DATA|Array|No|Informs the list of data that will be submitted in authentication.|
+|LOG|LOGIN|String|No|Name of the function that will receive the authentication data and return the result.|
+|LOG|ALLOW|String|Yes|Name of the function that will check the user's access to the given route.|
+|LOG|LOAD|String|Yes|Route redirector function name.|
+|LOG|TIME|Integer|Yes|Information in seconds about the maximum time allowed between navigations.|
+
+Optional keys, when unnecessary, must be set to null.
+
+### CHECK
+
+
+
+
+
+
+
+
+
+
 
 ### GATEWAY
 

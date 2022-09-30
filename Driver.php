@@ -360,7 +360,9 @@ class Driver {
 	private function logout() {
 		/* encerra a sessão */
 		if (isset($_SESSION)) {
-			session_unset();
+			if (array_key_exists("__DRIVER__", $_SESSION)) {
+				unset($_SESSION["__DRIVER__"]);
+			}
 			$this->start();
 		}
 		return;
@@ -548,6 +550,7 @@ class Driver {
 		$ID    = $this->CONFIG["ID"];
 		$page  = ($id === null || !array_key_exists($id, $ID)) ? null : $ID[$id];
 		$index = $_SERVER["SCRIPT_NAME"];
+		$log   = $this->CONFIG["LOG"] === null ? false : true;
 
 		$_SESSION["__DRIVER__"]["LOG"][] = array(
 			"INFO"   => $this->status(true), /* informação do estatus */
@@ -555,6 +558,7 @@ class Driver {
 			"PAGE"   => $page,               /* página desejada */
 			"PATH"   => $path,               /* página definida */
 			"INDEX"  => $index,              /* módulo do sistema utilizado */
+			"LOG"    => $log,                /* navegação exige senha */
 			"LOGIN"  => $this->log(),        /* acesso com usuário logado */
 			"STATUS" => $this->status(),     /* número do status */
 			"TIME"   => $this->time(),       /* registro, em segundos, do momento da ação */
