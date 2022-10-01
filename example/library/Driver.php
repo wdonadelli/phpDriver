@@ -531,6 +531,21 @@ class Driver {
 				return $load;
 			}
 
+			/* se for HOME */
+			if ($load === "HOME") {
+				$this->STATUS = 9;
+				$this->history($this->CONFIG["HOME"]);
+				return $this->CONFIG["HOME"];
+			}
+
+			/* se for EXIT */
+			if ($load === "EXIT") {
+				$this->STATUS = 9;
+				$this->logout();
+				$this->history($this->CONFIG["LOG"]["GATEWAY"]);
+				return $this->CONFIG["LOG"]["GATEWAY"];
+			}
+
 			/* se for um identificador, retornar o arquivo correspondete como path */
 			if (gettype($load) === "string" && array_key_exists($load, $this->CONFIG["ID"])) {
 				$this->STATUS = 9;

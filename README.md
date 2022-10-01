@@ -77,226 +77,124 @@ Configuration data has the following properties:
 
 |Key|Subkey|Type|Optional|Description|
 |:-:|:----:|:--:|:------:|:----------|
-|CHECK|-|Boolean|Yes|Indicates whether the tool should carry out a previous data check.|
-|HOME|-|String|No|Defines the path of the application's main page.|
-|ID|-|Array/Object|No|Contains the list of paths to application files defined from identifiers.|
-|LOG|-|Array/Obeject|Yes|Informs if the application will require authentication.|
-|LOG|GATEWAY|String|No|Sets the authentication page path.|
-|LOG|DATA|Array|No|Informs the list of data that will be submitted in authentication.|
-|LOG|LOGIN|String|No|Name of the function that will receive the authentication data and return the result.|
-|LOG|ALLOW|String|Yes|Name of the function that will check the user's access to the given route.|
-|LOG|LOAD|String|Yes|Route redirector function name.|
-|LOG|TIME|Integer|Yes|Information in seconds about the maximum time allowed between navigations.|
+|[CHECK](#CHECK)|-|Boolean|Yes|Indicates whether the tool should carry out a previous data check.|
+|[HOME](#HOME)|-|String|No|Defines the path of the application's main page.|
+|[ID](#ID)|-|Array/Object|No|Contains the list of paths to application files defined from identifiers.|
+|[LOG](#LOG)|-|Array/Object|Yes|Informs if the application will require authentication.|
+|LOG|[GATEWAY](#LOG-GATEWAY)|String|No|Sets the authentication page path.|
+|LOG|[DATA](#LOG-DATA)|Array|No|Informs the list of data that will be submitted in authentication.|
+|LOG|[LOGIN](#LOG-LOGIN)|String|No|Name of the function that will receive the authentication data and return the result.|
+|LOG|[ALLOW](#LOG-ALLOW)|String|Yes|Name of the function that will check the user's access to the given route.|
+|LOG|[LOAD](#LOG-LOAD)|String|Yes|Route redirector function name.|
+|LOG|[TIME](#LOG-TIME)|Integer|Yes|Information in seconds about the maximum time allowed between navigations.|
 
 Optional keys, when unnecessary, must be set to null.
 
 ### CHECK
 
+By default, the tool will check the configuration data each time the builder is called.
 
+When the CHECK attribute is set to false, configuration data checking will not be done by the constructor, saving processing. When true or not set, the check will be performed.
 
+During the construction process, it is advisable to leave it on to examine any mistakes in the configuration, and it can be turned off later to speed up loading.
 
+**When set to false, the other optional keys, if not used, must be set to** `null`.
 
+### HOME
 
+The HOME attribute will set the path to the main application file.
 
+The route will point to the file defined in HOME when:
 
+- the identifier is _HOME_;
+- an identifier is not defined;
+- an invalid identifier is defined;
+- there is an attempt to access an unauthorized file;
+- authentication succeeds, if required by the configuration; or when
+- the identifier is _EXIT_, if authentication is not required.
 
+### ID
 
+The ID attribute will define the list of route identifiers and their relative paths to the destination files.
 
-### GATEWAY
+It is forbidden to define identifiers with the names _HOME_ and _EXIT_, as they are reserved.
 
-|Key|Type|Required|Default|Description|
-|:--:|:--:|:------:|:-----:|:----------|
-|GATEWAY|Boolean|No|False|Defines whether the application will require user authentication.|
+The navigation route is defined by the URL, **using data from the GET (QUERY) method**, which will identify the destination page from the identifier associated with the _id_ key.
 
-This key will define the need to check the user's authentication for browsing the application pages.
-
-Its value will define the obligation to inform or not other keys or subkeys.
-
-If `force` is set to true, `GATEWAY` must be informed.
-
-### TARGET
-
-|Key|Type|Required|Default|Description|
-|:-:|:--:|:------:|:-----:|:----------|
-|TARGET|Array|Yes|None|Defines the identifiers and their respective pages to be accessed during navigation.|
-
-Each page will contain an identifier and each identifier will be associated with a file containing the content to be displayed.
-
-Navigation will take place through the URL, using data from the GET method (QUERY), which will identify the page to be accessed from the _id_ key which must contain the identifier of the corresponding file.
-
-Below is an example of configuring the `TARGET` key with some random identifiers:
-
-```php
-$config = array(
-	...
-	"TARGET" => array(
-		...
-		"page1" => "content/file1.html",
-		"page2" => "content/file2.html",
-		...
-	),
-	...
-);
-```
-
-File paths must be string and be a valid address.
-
-If you want to create a link that directs to _file1.html_, proceed as follows:
+For example, if the file _content/page.html_ is associated with the identifier _myID_, you can create a navigation link for the mentioned route as follows:
 
 ```html
-<a href="?id=page1">Page 1</a>
+<a href="?id=myID">Target Name</a>
 ```
 
-When clicking on the link above, the URL will contain the value of type _http://mypage/?id=page1_. In this situation, **Driver** will understand that the path to be accessed is from _file1.html_. Likewise, if the URL is _http://mypage/?id=page2_, the path to be accessed will be from _file2.html_.
-
-There are three special subkeys that need to be defined: `HOME`, `LOGIN` and `LOGOUT`.
-
-|Subkey|Type|Required|Default|Description|
-|:----:|:--:|:------:|:-----:|:----------|
-|HOME|String|Yes|None|Sets the main page path.|
-|LOGIN|String|No/Yes|HOME|Sets the user authentication page path.|
-|LOGOUT|String|No|LOGIN|Sets the exit page path.|
-
-If the `force` argument is true, the three subkeys are mandatory information, regardless of whether or not the application will require user authentication.
-
-`HOME` is always required. Whenever there is an attempt to access an undefined _id_, the application will redirect to the main page.
-
-`LOGIN` is required if the system requires authentication. Otherwise, it must be equal to `HOME`.
-
-`LOGOUT` is not mandatory. If the system requires authentication, a special page can be created to inform the end of the session or it must be the same as `LOGIN`. Otherwise, it must be equal to `HOME`.
+When clicking on the link above, the destination URL will point to an address similar to _http://mypage/?id=myID_. When analyzing the route, the tool will return, if allowed, the path to access the corresponding file.
 
 ### LOG
 
-|Key|Type|Required|Default|Description|
-|:-:|:--:|:------:|:-----:|:----------|
-|LOG|Array|Yes/No|Empty Array|Defines which keys will be sent for authentication.|
+The LOG attribute will define the need for authentication to perform the navigation.
 
-If the application requires authentication, `LOG` is mandatory. If `force` is true, it is also mandatory, although not relevant.
+If not defined, navigation will not require authentication, otherwise the parameters to allow access must be informed.
 
-Authentication is checked by the POST method, and `LOG` must be an array whose items will correspond to the names of the form elements used by the user to authenticate.
+#### LOG-GATEWAY
 
-Below is an example of an authentication page and the corresponding value of `LOG`:
+The GATEWAY attribute will define the path of the file corresponding to the authentication page, where the user will inform his credentials for checking.
 
-```html
-<form method="post" action="?" >
-	<label for="usr">User identifier:</label>
-	<input type="text" name="usr" id="usr" required="" autofocus="" autocomplete="off" />
-	<label for="pwd">Password:</label>
-	<input type="password" name="pwd" id="pwd" required="" autofocus="" autocomplete="off" />
-	<button type="submit">Go</button>
-</form>
-```
+#### LOG-DATA
 
-```php
-$config = array(
-	...
-	"LOG" => array("usr", "pwd"),
-	...
-);
-```
+The DATA attribute will inform the list containing the data that the user will inform in the authentication procedure.
 
-### AUTH
+The data correspond to the names (strings) of the form fields that the user will submit through the authentication page defined in the [GATEWAY](#LOG-GATEWAY) attribute. **The sending of data must be by the POST method.**
 
-|Key|Type|Required|Default|Description|
-|:-:|:--:|:------:|:-----:|:----------|
-|AUTH|String|Yes/No|Null|Defines the name of the function that will check user data for authentication.|
+#### LOG-LOGIN
 
-If the `force` argument is true, the information is mandatory. If the system requires authentication, the function name must be informed, otherwise it can be set to `null`, as it will be irrelevant.
+The LOGIN attribute must inform the name of the function that will receive the authentication data and will return the result of the success of the operation.
 
-The function that will authenticate will receive the collected POST data. If the permission is denied, the function will return `null`, otherwise it must return an array with the authenticated user's data. __Driver__ will not check user data, an external function is required.
+The function will need to contain an argument to receive the data informed by the user, which will occur by sending the PHP variable `$_POST`.
 
-Below is an example of an authenticator function:
+If the function returns null, the tool will understand that the authentication has failed, otherwise it will consider that the user has been successfully authenticated and will record this result to perform the route analysis.
 
-```php
-function credentialChecker($post) {
-	/* Establish the form of checking according to convenience */
-	return $check === true ? $dataUser : null;
-}
+As long as you are not authenticated, no route other than the one informed in [GATEWAY](#LOG-GATEWAY) will be provided. After authentication, the route will be directed to [HOME](#HOME).
 
-$config = array(
-	...
-	"AUTH" => "credentialChecker",
-	...
-);
-```
+#### LOG-ALLOW
 
-### CHECK
+The ALLOW attribute must inform the name of the function that will analyze the access permission for each route, returning true, if allowed, or false, if not allowed.
 
-|Key|Type|Required|Default|Description|
-|:-:|:--:|:------:|:-----:|:----------|
-|CHECK|String|Yes/No|Null|Defines the name of the role that will check the user's access permission to the page.|
+The function will need to contain three arguments that will receive **user** data, informed by the function defined in the [LOGIN](#LOG-LOGIN) attribute, the route **identifier** and the corresponding **path**.
 
-If the `force` argument is true, the information is mandatory. If the system requires authentication, the function name can be informed if you want to perform such verification, otherwise it can be set to `null`.
+If the function returns false, the route will be directed to [HOME](#HOME).
 
-The function that will check the user's access to the page to be accessed will receive the user's data, received during authentication, the page id and the file path. If the permission is denied, the function must return false, otherwise true. __Driver__ will not check user access, an external function is required.
+#### LOG-LOAD
 
-Below is an example of an authenticator function:
+The LOAD attribute must inform the name of the function that will be triggered before returning the route and that will have the power to redirect it, either to a pre-defined path or to another file.
 
-```php
-function accessChecker($user, &id, &path) {
-	/* Establish the form of checking according to convenience */
-	return $access === true ? true : false;
-}
+The function will need to contain an attribute that will receive the data returned by the [debug](#degub) method.
 
-$config = array(
-	...
-	"CHECK" => "accessChecker",
-	...
-);
-```
+The function must return a string that will correspond to a valid identifier, constant in the [ID](#ID) attribute, _HOME_, _EXIT_ or a valid path to a given file. Otherwise, the route returned will be the one defined before the function was fired.
 
-If the identifier is `HOME`, `LOGIN` or `LOGOUT`, access will not be verified.
+**Here the redirection will be in charge of the function, allowing behavior that contradicts that defined by the tool.**
+
+#### LOG-TIME
+
+The TIME attribute must inform the time, in seconds, that each request can remain active.
+
+When the time is extrapolated, when navigating to another route, the session will be terminated and a new authentication will be required.
 
 
-### TIMEOUT
 
-|Key|Type|Required|Default|Description|
-|:-:|:--:|:------:|:-----:|:----------|
-|TIMEOUT|Integer|No|Null|Defines the maximum time, in seconds, between requests.|
 
-If the `force` argument is true, the information is mandatory. If the system requires authentication, a maximum time allowed between requests can be defined, otherwise it can be defined as `null`. If the maximum time is exceeded, the session will be terminated.
 
-## JSON x ARRAY
 
-Below are two configuration examples, the first in the form of an array in PHP and the other in JSON format.
 
-```php
-$config = array(
-	"GATEWAY" => true,
-	"TARGET" => array(
-		"HOME"   => "system/home.html",
-		"LOGIN"  => "system/login.html",
-		"LOGOUT" => "system/logout.html",
-		"page1"  => "content/file1.html",
-		"page2"  => "content/file2.html",
-		"page3"  => "content/file3.html"
-	),
-	"LOG"     => array("usr", "pwd"),
-	"AUTH"    => "credentialChecker",
-	"CHECK"   => "accessChecker",
-	"TIMEOUT" => 180
-);
-```
 
-```json
-{
-	"GATEWAY": true,
-	"TARGET": {
-		"HOME":   "system/home.html",
-		"LOGIN":  "system/login.html",
-		"LOGOUT": "system/logout.html",
-		"page1":  "content/file1.html",
-		"page2":  "content/file2.html",
-		"page3":  "content/file3.html"
-	},
-	"LOG":     ["usr", "pwd"],
-	"AUTH":    "credentialChecker",
-	"CHECK":   "accessChecker",
-	"TIMEOUT": 180
-}
-```
+
+
+
 
 ## Methods
+
+
+
+
 
 |Method|Returns|Argument|Default|Description|
 |:----:|:-----:|:------:|:-----:|:----------|
