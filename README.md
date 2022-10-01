@@ -77,16 +77,16 @@ Configuration data has the following properties:
 
 |Key|Subkey|Type|Optional|Description|
 |:-:|:----:|:--:|:------:|:----------|
-|[CHECK](#CHECK)|-|Boolean|Yes|Indicates whether the tool should carry out a previous data check.|
-|[HOME](#HOME)|-|String|No|Defines the path of the application's main page.|
-|[ID](#ID)|-|Array/Object|No|Contains the list of paths to application files defined from identifiers.|
-|[LOG](#LOG)|-|Array/Object|Yes|Informs if the application will require authentication.|
-|LOG|[GATEWAY](#LOG-GATEWAY)|String|No|Sets the authentication page path.|
-|LOG|[DATA](#LOG-DATA)|Array|No|Informs the list of data that will be submitted in authentication.|
-|LOG|[LOGIN](#LOG-LOGIN)|String|No|Name of the function that will receive the authentication data and return the result.|
-|LOG|[ALLOW](#LOG-ALLOW)|String|Yes|Name of the function that will check the user's access to the given route.|
-|LOG|[LOAD](#LOG-LOAD)|String|Yes|Route redirector function name.|
-|LOG|[TIME](#LOG-TIME)|Integer|Yes|Information in seconds about the maximum time allowed between navigations.|
+|[CHECK](#check)|-|Boolean|Yes|Indicates whether the tool should carry out a previous data check.|
+|[HOME](#home)|-|String|No|Defines the path of the application's main page.|
+|[ID](#id)|-|Array/Object|No|Contains the list of paths to application files defined from identifiers.|
+|[LOG](#log)|-|Array/Object|Yes|Informs if the application will require authentication.|
+|LOG|[GATEWAY](#log-gateway)|String|No|Sets the authentication page path.|
+|LOG|[DATA](#log-data)|Array|No|Informs the list of data that will be submitted in authentication.|
+|LOG|[LOGIN](#log-login)|String|No|Name of the function that will receive the authentication data and return the result.|
+|LOG|[ALLOW](#log-allow)|String|Yes|Name of the function that will check the user's access to the given route.|
+|LOG|[LOAD](#log-load)|String|Yes|Route redirector function name.|
+|LOG|[TIME](#log-time)|Integer|Yes|Information in seconds about the maximum time allowed between navigations.|
 
 Optional keys, when unnecessary, must be set to null.
 
@@ -143,7 +143,7 @@ The GATEWAY attribute will define the path of the file corresponding to the auth
 
 The DATA attribute will inform the list containing the data that the user will inform in the authentication procedure.
 
-The data correspond to the names (strings) of the form fields that the user will submit through the authentication page defined in the [GATEWAY](#LOG-GATEWAY) attribute. **The sending of data must be by the POST method.**
+The data correspond to the names (strings) of the form fields that the user will submit through the authentication page defined in the [GATEWAY](#log-gateway) attribute. **The sending of data must be by the POST method.**
 
 #### LOG-LOGIN
 
@@ -153,15 +153,15 @@ The function will need to contain an argument to receive the data informed by th
 
 If the function returns null, the tool will understand that the authentication has failed, otherwise it will consider that the user has been successfully authenticated and will record this result to perform the route analysis.
 
-As long as you are not authenticated, no route other than the one informed in [GATEWAY](#LOG-GATEWAY) will be provided. After authentication, the route will be directed to [HOME](#HOME).
+As long as you are not authenticated, no route other than the one informed in [GATEWAY](#log-gateway) will be provided. After authentication, the route will be directed to [HOME](#home).
 
 #### LOG-ALLOW
 
 The ALLOW attribute must inform the name of the function that will analyze the access permission for each route, returning true, if allowed, or false, if not allowed.
 
-The function will need to contain three arguments that will receive **user** data, informed by the function defined in the [LOGIN](#LOG-LOGIN) attribute, the route **identifier** and the corresponding **path**.
+The function will need to contain three arguments that will receive **user** data, informed by the function defined in the [LOGIN](#log-login) attribute, the route **identifier** and the corresponding **path**.
 
-If the function returns false, the route will be directed to [HOME](#HOME).
+If the function returns false, the route will be directed to [HOME](#home).
 
 #### LOG-LOAD
 
@@ -169,7 +169,7 @@ The LOAD attribute must inform the name of the function that will be triggered b
 
 The function will need to contain an attribute that will receive the data returned by the [debug](#degub) method.
 
-The function must return a string that will correspond to a valid identifier, constant in the [ID](#ID) attribute, _HOME_, _EXIT_ or a valid path to a given file. Otherwise, the route returned will be the one defined before the function was fired.
+The function must return a string that will correspond to a valid identifier, constant in the [ID](#id) attribute, _HOME_, _EXIT_ or a valid path to a given file. Otherwise, the route returned will be the one defined before the function was fired.
 
 **Here the redirection will be in charge of the function, allowing behavior that contradicts that defined by the tool.**
 
