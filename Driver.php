@@ -24,9 +24,7 @@ SOFTWARE.
 ------------------------------------------------------------------------------*/
 
 /* para efetuar testes na biblioteca (desligar na produção) */
-define("PHPDRIVER_SHOW_ERRORS", 0);
-
-if (PHPDRIVER_SHOW_ERRORS === 1) {
+if (false) {
 	ini_set('display_errors', 1);
 	ini_set('display_startup_errors', 1);
 	error_reporting(E_ALL);

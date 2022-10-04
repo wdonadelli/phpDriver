@@ -179,36 +179,26 @@ The TIME attribute must inform the time, in seconds, that each request can remai
 
 When the time is extrapolated, when navigating to another route, the session will be terminated and a new authentication will be required.
 
-
-
-
-
-
-
-
-
-
-
-
 ## Methods
 
-
-
-
-
-|Method|Returns|Argument|Default|Description|
-|:----:|:-----:|:------:|:-----:|:----------|
-|path|String|None|None|Returns the file path defined by the **Driver** during the request.|
-|status|Integer/String|Boolean|False|Returns the status of the behavior defined by the **Driver** during the request.|
-|debug|Array|Boolean|False|Returns an array with characteristics defined/considered by the **Driver**|
-|version|String|None|None|Returns the library version.|
+The **Driver** object has the following public methods.
 
 ### path
 
-```php
-path()
-```
-The method has no argument.
+Sets the route and returns the path to the file to be displayed.
+
+The method can only be called once per request, calling it a second time will cause an error.
+
+The route is defined by the following processing when authentication is required:
+
+![Path method flowchart.](docs/fluxograma_path.png)
+
+
+
+
+
+
+
 
 ### status
 
