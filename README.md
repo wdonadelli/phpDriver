@@ -185,7 +185,7 @@ The **Driver** object has the following public methods.
 
 ### path
 
-Sets the route and returns the path to the file to be displayed (String).
+Sets the route and returns the path to the file to be displayed (string).
 
 The method can only be called once per request, calling it a second time will cause an error.
 
@@ -208,7 +208,7 @@ When not requiring authentication, the following behavior will be observed:
 status($text)
 ```
 
-The method returns the following identifiers:
+The method returns the status identifier (integer) or its textual counterpart (string) as shown in the table below:
 
 |Numerical Value|Text Value|
 |:-------------:|:---------|
@@ -221,15 +221,28 @@ The method returns the following identifiers:
 |6|PAGE NOT FOUND|
 |7|SESSION CLOSED|
 |8|SESSION EXPIRED|
+|9|MODIFIED ROUTE|
 
-The method has an optional argument which, if true, will return the textual value in place of the numeric value.
+The status (values 1 to 9) is set after the `path` method is called, if it is called before, it will return zero (_SESSION STARTED_).
+
+The method has an optional argument (`$text`) which, if true, will return the textual value in place of the numeric value.
 
 ### version
 
 ```php
 version()
 ```
-The method has no argument.
+The method returns the [version](#versioning) of the tool.
+
+### json
+
+```php
+json($print)
+```
+
+The method returns the configuration used to define the route (array).
+
+The method has an argument (`$print`) which, if true, will print the configuration used in JSON format on the screen.
 
 ### debug
 
@@ -237,21 +250,47 @@ The method has no argument.
 debug($print)
 ```
 
-The method has an optional argument which, if true, will print to the screen the data it returns.
+The method returns the [session](#session) data stored by the tool during requests (array).
+
+The method has an argument (`$print`) which, if true, will print the returned data on the screen.
 
 ## Session
 
-The PHP session will be started by the **Driver** constructor. If you want to save some information in the `$_SESSION` variable, you can do it after the constructor.
+The PHP session will be started by the **Driver** constructor, if not already defined, and the data stored by the tool during requests will be cleared in [status](#status) 7 and 8 cases.
 
-The following identifiers are for the private use of `Driver`, and their manipulation is not recommended:
+The data stored by the tool in the `$_SESSION` variable will be registered in the `__DRIVER__` key, whose manipulation is not recommended. Only this key will be cleared in the cases mentioned above, and other data can be stored, if necessary, in other keys.
+
+The following data will be stored by the tool and can be observed through the [debug](#debug) method:
+
+|Key|Type|Description|
+|:-:|:--:|:----------|
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
 
 
-|ID|Description|
-|:-:|:----------|
-|&#95;&#95;USER&#95;&#95;|Logs authenticated user data.|
-|&#95;&#95;TIME&#95;&#95;|Records the authentication time (`YYYY-MM-DD HH:MM:SS`).|
-|&#95;&#95;INIT&#95;&#95;|Records the time of the request (in seconds).|
-|&#95;&#95;HASH&#95;&#95;|Registers the session identifier.|
+As for the browsing history (LOG key), the following information will be recorded in the order of occurrence (from oldest to newest) when the [path](#path) method is called:
+
+|Key|Type|Description|
+|:-:|:--:|:----------|
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+||||
+
+
+
+
+
 
 ## Security
 
