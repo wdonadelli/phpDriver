@@ -185,19 +185,21 @@ The **Driver** object has the following public methods.
 
 ### path
 
-Sets the route and returns the path to the file to be displayed.
+Sets the route and returns the path to the file to be displayed (String).
 
 The method can only be called once per request, calling it a second time will cause an error.
 
 The route is defined by the following processing when authentication is required:
 
-![Path method flowchart.](docs/fluxograma_path.png)
+![Flowchart of the path method.](docs/fluxograma_path.png)
 
+Before returning, the previously defined path can go through the route diverter:
 
+![Return flowchart of the path method.](docs/fluxograma_load.png)
 
+When not requiring authentication, the following behavior will be observed:
 
-
-
+![Flowchart of path method without authentication.](docs/fluxograma_free.png)
 
 
 ### status
