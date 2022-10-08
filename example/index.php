@@ -2,7 +2,7 @@
 <html class="wd">
 
 	<head>
-		<title> -- phpDriver -- </title>
+		<title> -- Driver -- </title>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1"/>
 		<meta name="keywords" content="phpDriver" />
@@ -15,7 +15,7 @@
 <body class="wd-bg-black wd-flyer">
 
 		<header class="wd-bg-grey">
-			<h1>phpDriver</h1>
+			<h1>Driver</h1>
 		</header>
 
 	<p>Choose the type of access:</p>

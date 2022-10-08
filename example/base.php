@@ -12,7 +12,7 @@ $nstatus = $driver->status();
 <html class="wd">
 
 	<head>
-		<title> -- phpDriver -- </title>
+		<title> -- Driver -- </title>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1"/>
 		<meta name="keywords" content="phpDriver" />
@@ -26,7 +26,7 @@ $nstatus = $driver->status();
 	<body class="wd-flyer wd-bg-black">
 
 		<header class="wd-bg-grey" id="header">
-			<h1>phpDriver</h1>
+			<h1>Driver</h1>
 <?php
 if ($nstatus > 2 && $nstatus < 7) {
 	echo "
