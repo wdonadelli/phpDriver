@@ -24,9 +24,7 @@ SOFTWARE.
 ------------------------------------------------------------------------------*/
 
 /* para efetuar testes na biblioteca (desligar na produção) */
-define("PHPDRIVER_SHOW_ERRORS", 1);
-
-if (PHPDRIVER_SHOW_ERRORS === 1) {
+if (true) {
 	ini_set('display_errors', 1);
 	ini_set('display_startup_errors', 1);
 	error_reporting(E_ALL);
@@ -312,7 +310,8 @@ class Driver {
 		$hash = array(
 			"USER" => $_SESSION["__DRIVER__"]["USER"],
 			"TIME" => $_SESSION["__DRIVER__"]["TIME"],
-			"DATE" => $_SESSION["__DRIVER__"]["DATE"]
+			"DATE" => $_SESSION["__DRIVER__"]["DATE"],
+			"IP"   => $_SERVER["REMOTE_ADDR"]
 		);
 
 		return md5(json_encode($hash));
@@ -345,6 +344,9 @@ class Driver {
 
 		/* checar se a última página foi de login */
 		if ($this->lastRequest("PATH") !== $this->CONFIG["LOG"]["GATEWAY"]) {return false;}
+
+		/* checar se o arquivo executável é o mesmo */
+		if ($this->lastRequest("INDEX") !== $_SERVER["SCRIPT_NAME"]) {return false;}
 
 		/* checar se os dados do POST conferem com os da autenticação (LOG.DATA) */
 		if (count($_POST) !== count($this->CONFIG["LOG"]["DATA"])) {return false;}
