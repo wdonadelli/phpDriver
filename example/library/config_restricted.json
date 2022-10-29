@@ -1,0 +1,19 @@
+{
+	"CHECK": true,
+	"HOME":  "content/home.php",
+	"ID": {
+		"config": "content/config.php",
+		"debug":  "content/debug.php",
+		"only1":  "content/only1.php",
+		"only2":  "content/only2.php"
+	},
+	"LOG": {
+		"GATEWAY": "content/login.php",
+		"EXIT":    "content/exit.php",
+		"DATA":    ["usr", "pwd"],
+		"LOGIN":   "credentialChecker",
+		"ALLOW":   "accessChecker",
+		"LOAD":    "loadChecker",
+		"TIME":    180
+	}
+}
