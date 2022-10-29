@@ -24,7 +24,7 @@ SOFTWARE.
 ------------------------------------------------------------------------------*/
 
 /* para efetuar testes na biblioteca (desligar na produção) */
-if (false) {
+if (0) {
 	ini_set('display_errors', 1);
 	ini_set('display_startup_errors', 1);
 	error_reporting(E_ALL);
@@ -117,47 +117,59 @@ class Driver {
 /*----------------------------------------------------------------------------*/
 	public function __construct(
 		$config,
-		$httponly = true, /* configuração de cookie */
-		$secure   = null, /* configuração de cookie */
-		$samesite = "Lax" /* configuração de cookie */
-	)
-	{
-
+		$httponly = true,  /* cookie: permitir acesso por JS? */
+		$secure   = null,  /* cookie: só permitir em https? */
+		$samesite = "Lax", /* cookie: como enviar entre páginas? */
+		$lifetime = 0      /* cookie: tempo de vida (em segundos) */
+	) {
 		/* obter, definir e checar dados de configuração */
 		$this->config($config);
-
-		/* definir configuração de cookies e iniciar sessão */
-		/*-------------------------------------------------------------------------\
-		| https://www.php.net/manual/pt_BR/function.setcookie.php
-		| https://www.php.net/manual/en/function.ini-set.php
-		| https://www.php.net/manual/en/function.ini-get.php
-		| https://www.php.net/manual/en/ini.list.php
-		| https://www.php.net/manual/pt_BR/reserved.variables.server.php
-		| https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Headers/Set-Cookie/SameSite.
-		\-------------------------------------------------------------------------*/
-		if (ini_get("session.cookie_httponly") !== false) {
-			ini_set("session.cookie_httponly", $httponly);
-		}
-		if (ini_get("session.cookie_secure") !== false) {
-			$https = true;
-			if (!array_key_exists("HTTPS", $_SERVER) || empty($_SERVER["HTTPS"])) {
-				$https = false;
-			}
-			ini_set("session.cookie_secure", ($secure === null ? $https : $secure));
-		}
-		if (ini_get("session.cookie_samesite") !== false) {
-			ini_set("session.cookie_samesite", $samesite);
-		}
-		$this->start();
-
+		/* iniciar sessão */
+		$this->start($httponly, $secure, $samesite, $lifetime);
 		/* definir status */
 		$this->STATUS = 0;
 		return;
 	}
 
 /*----------------------------------------------------------------------------*/
-	private function start() {
+	private function start($httponly, $secure, $samesite, $lifetime) {
 		/* inicia dados da sessão */
+
+		/* configurar cookies */
+		/*-------------------------------------------------------------------------\
+		| https://www.php.net/manual/pt_BR/function.setcookie.php
+		| https://www.php.net/manual/en/function.ini-set.php
+		| https://www.php.net/manual/en/function.ini-get.php
+		| https://www.php.net/manual/en/ini.list.php
+		| https://www.php.net/manual/pt_BR/reserved.variables.server.php
+		| https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Headers/Set-Cookie/SameSite
+		\-------------------------------------------------------------------------*/
+		if (ini_get("session.cookie_httponly") !== false) {
+			ini_set(
+				"session.cookie_httponly",
+				$httponly === false ? false : true
+			);
+		}
+		if (ini_get("session.cookie_secure") !== false) {
+			$https = isset($_SERVER["HTTPS"]) && !empty($_SERVER["HTTPS"]) ? true : false;
+			ini_set(
+				"session.cookie_secure",
+				gettype($secure) === "boolean" ? $secure : $https
+			);
+		}
+		if (ini_get("session.cookie_samesite") !== false) {
+			$options = array("Lax", "Strict", "None");
+			ini_set(
+				"session.cookie_samesite",
+				in_array($samesite, $options, true) ? $samesite : "Lax"
+			);
+		}
+		if (ini_get("session.cookie_lifetime") !== false) {
+			ini_set(
+				"session.cookie_lifetime",
+				gettype($lifetime) === "integer" && $lifetime > 0 ? $lifetime : 0
+			);
+		}
 
 		/* iniciar se não iniciada */
 		if (!isset($_SESSION)) {
@@ -165,12 +177,12 @@ class Driver {
 		}
 
 		/* definir chave principal de sessão */
-		if (!array_key_exists("__DRIVER__", $_SESSION)) {
+		if (!isset($_SESSION["__DRIVER__"])) {
 			$_SESSION["__DRIVER__"] = array();
 		}
 		/* definir chaves secundárias de sessão */
 		foreach ($this->SESSION as $key => $value) {
-			if (!array_key_exists($key, $_SESSION["__DRIVER__"])) {
+			if (!isset($_SESSION["__DRIVER__"][$key])) {
 				$_SESSION["__DRIVER__"][$key] = $value;
 			}
 		}
@@ -215,7 +227,7 @@ class Driver {
 		}
 
 		/* checar dados de CONFIG, se assim estiver definido */
-		if (!array_key_exists("CHECK", $this->CONFIG) || $this->CONFIG["CHECK"] !== false) {
+		if (!isset($this->CONFIG["CHECK"]) || $this->CONFIG["CHECK"] !== false) {
 			$this->check();
 		}
 
@@ -235,13 +247,13 @@ class Driver {
 			$info   = $ref === null ? "CONFIG.{$id}" : "CONFIG.{$ref}.{$id}";
 
 			/* se chave não obrigatória e não foi definida: null */
-			if ($check["REQUIRED"] === false && !array_key_exists($id, $data)) {
+			if ($check["REQUIRED"] === false && !isset($data[$id])) {
 				if ($ref === null) {$this->CONFIG[$id]       = null;}
 				else               {$this->CONFIG[$ref][$id] = null;}
 
 			} else {
 				/* se chave é obrigatória: checar */
-				if (!array_key_exists($id, $data)) {
+				if (!isset($data[$id])) {
 					$this->error($info, "Information not provided");
 				}
 
@@ -251,7 +263,7 @@ class Driver {
 				}
 
 				/* checar valor mínimo */
-				if (array_key_exists("SIZE", $check)) {
+				if (isset($check["SIZE"])) {
 					$size = $check["TYPE"] === "array" ? count($data[$id]) : $data[$id];
 					if ($size < $check["SIZE"]) {
 						$this->error($info, "Insufficient data");
@@ -259,7 +271,7 @@ class Driver {
 				}
 
 				/* checar identificadores proibidos */
-				if (array_key_exists("BADKEYS", $check)) {
+				if (isset($check["BADKEYS"])) {
 					foreach($data[$id] as $key => $item) {
 						if (in_array($key, $check["BADKEYS"])) {
 							$this->error($info, "Inappropriate identifier ($key)");
@@ -268,7 +280,7 @@ class Driver {
 				}
 
 				/* checar tipos da lista */
-				if (array_key_exists("TYPELIST", $check)) {
+				if (isset($check["TYPELIST"])) {
 					foreach($data[$id] as $key => $item) {
 						if (!$this->matchType($check["TYPELIST"], $item)) {
 							$this->error($info, "Inappropriate information ({$key})");
@@ -277,7 +289,7 @@ class Driver {
 				}
 
 				/* checar subitens */
-				if (array_key_exists("KEYS", $check)) {
+				if (isset($check["KEYS"])) {
 					$this->check($id);
 				}
 			}
@@ -385,7 +397,7 @@ class Driver {
 		if (count($_POST) !== count($this->CONFIG["LOG"]["DATA"])) {return false;}
 
 		foreach ($this->CONFIG["LOG"]["DATA"] as $value) { /* checar nomes dos formulários */
-			if (!array_key_exists($value, $_POST)) {return false;}
+			if (!isset($_POST[$value])) {return false;}
 		}
 
 		return true;
@@ -422,7 +434,7 @@ class Driver {
 /*----------------------------------------------------------------------------*/
 	private function id() {
 		/* retorna o valor do id */
-		return array_key_exists("id", $_GET) ? $_GET["id"] : null;
+		return isset($_GET["id"]) ? $_GET["id"] : null;
 	}
 
 /*----------------------------------------------------------------------------*/
@@ -431,7 +443,7 @@ class Driver {
 		$last = count($_SESSION["__DRIVER__"]["LOG"]) - 1;
 		if ($last < 0) {return null;}
 		$item = $_SESSION["__DRIVER__"]["LOG"][$last];
-		if ($id === null || !array_key_exists($id, $item)) {return $item;}
+		if ($id === null || !isset($item[$id])) {return $item;}
 		return $item[$id];
 	}
 
@@ -448,7 +460,7 @@ class Driver {
 		}
 
 		/* rota incorreta: HOME */
-		if (!array_key_exists($id, $this->CONFIG["ID"])) {
+		if (!isset($this->CONFIG["ID"][$id])) {
 			$this->STATUS = 6;
 			return $this->CONFIG["HOME"];
 		}
@@ -505,7 +517,7 @@ class Driver {
 		}
 
 		/* rota inexistente: HOME */
-		if (!array_key_exists($id, $this->CONFIG["ID"])) {
+		if (!isset($this->CONFIG["ID"][$id])) {
 			$this->STATUS = 6;
 			return $this->CONFIG["HOME"];
 		}
@@ -582,7 +594,7 @@ class Driver {
 			}
 
 			/* se for um identificador, retornar o arquivo correspondete como path */
-			if (gettype($load) === "string" && array_key_exists($load, $this->CONFIG["ID"])) {
+			if (gettype($load) === "string" && isset($this->CONFIG["ID"][$load])) {
 				$this->STATUS = 9;
 				$this->history($this->CONFIG["ID"][$load]);
 				return $this->CONFIG["ID"][$load];
@@ -598,7 +610,7 @@ class Driver {
 		/* registra o histórico de navegação */
 		$id    = $this->id();
 		$ID    = $this->CONFIG["ID"];
-		$page  = ($id === null || !array_key_exists($id, $ID)) ? null : $ID[$id];
+		$page  = ($id === null || !isset($ID[$id])) ? null : $ID[$id];
 		$index = $_SERVER["SCRIPT_NAME"];
 		$log   = $this->CONFIG["LOG"] === null ? false : true;
 		$items = count($_SESSION["__DRIVER__"]["LOG"]);
