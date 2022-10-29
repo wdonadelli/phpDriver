@@ -140,7 +140,7 @@ class Driver {
 		}
 		if (ini_get("session.cookie_secure") !== false) {
 			$https = true;
-			if (!array_key_exists("HTTPS", $_SERVER) || empty($_SERVER['HTTPS'])) {
+			if (!array_key_exists("HTTPS", $_SERVER) || empty($_SERVER["HTTPS"])) {
 				$https = false;
 			}
 			ini_set("session.cookie_secure", ($secure === null ? $https : $secure));
