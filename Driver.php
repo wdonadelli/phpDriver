@@ -669,6 +669,7 @@ class Driver {
 			"ID"    => $this->CONFIG["ID"],
 			"LOG"   => $this->CONFIG["LOG"] === null ? null : array(
 				"GATEWAY" => $this->CONFIG["LOG"]["GATEWAY"],
+				"EXIT"    => $this->CONFIG["LOG"]["EXIT"],
 				"DATA"    => $this->CONFIG["LOG"]["DATA"],
 				"LOGIN"   => $this->CONFIG["LOG"]["LOGIN"],
 				"ALLOW"   => $this->CONFIG["LOG"]["ALLOW"],
@@ -692,8 +693,9 @@ class Driver {
 		$json = str_replace("\"LOG\":null}", "\"LOG\": null\n}", $json);
 
 		$srpl = array(
-			"CHECK"   => 0, "HOME"  => 0, "ID"    => 0, "LOG"  => 0, "GATEWAY" => 1,
-			"DATA"    => 1, "LOGIN" => 1, "ALLOW" => 1, "LOAD" => 1, "TIME"    => 1
+			"CHECK" => 0, "HOME" => 0, "ID"    => 0, "LOG"   => 0, "GATEWAY" => 1,
+			"EXIT"  => 1, "DATA" => 1, "LOGIN" => 1, "ALLOW" => 1, "LOAD" => 1,
+			"TIME"  => 1
 		);
 
 		foreach ($srpl as $key => $type) {
