@@ -14,6 +14,13 @@
 		"LOGIN":   "credentialChecker",
 		"ALLOW":   "accessChecker",
 		"LOAD":    "loadChecker",
-		"TIME":    180
-	}
+		"TIME":    180,
+		"DOIDO": 1
+	},
+	"COOKIES": {
+		"SAMESITE": "LAX"
+
+
+	},
+	"LOKO": 1
 }

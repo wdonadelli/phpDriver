@@ -57,6 +57,7 @@ class Driver {
 		"CHECK" => array( /* informa se deseja checar os dados de configuração */
 			"REQUIRED" => false,
 			"TYPE"     => "boolean"
+
 		),
 		"HOME" => array( /* informa a página principal */
 			"REQUIRED" => true,
@@ -104,6 +105,28 @@ class Driver {
 					"SIZE"     => 1
 				)
 			)
+		),
+		"COOKIES" => array( /* configuração de cookies, se for o caso */
+			"REQUIRED" => false,
+			"TYPE"     => "array",
+			"KEYS"     => array(
+				"HTTPONLY" => array( /* não permitir acesso por JS */
+					"REQUIRED" => false,
+					"TYPE"     => "boolean"
+				),
+				"SECURE" => array( /* só permitir transmissão em HTTPS */
+					"REQUIRED" => false,
+					"TYPE"     => "boolean"
+				),
+				"SAMESITE" => array( /* como compartilhar cookies entre sites */
+					"REQUIRED" => false,
+					"TYPE"     => "string"
+				),
+				"LIFETIME" => array( /* tempo de vida do cookie */
+					"REQUIRED" => false,
+					"TYPE"     => "integer"
+				)
+			)
 		)
 	);
 	private $SESSION = array( /* Dados de sessão SESSION[__DRIVER__] */
@@ -115,26 +138,143 @@ class Driver {
 		"LOG"  => array() /* histórico de ações (variável) [array] */
 	);
 /*----------------------------------------------------------------------------*/
-	public function __construct(
-		$config,
-		$httponly = true,  /* cookie: permitir acesso por JS? */
-		$secure   = null,  /* cookie: só permitir em https? */
-		$samesite = "Lax", /* cookie: como enviar entre páginas? */
-		$lifetime = 0      /* cookie: tempo de vida (em segundos) */
-	) {
-		/* obter, definir e checar dados de configuração */
+	public function __construct($config) {
+		/* construtor do objeto */
+
+		/* conferir dados de configuração */
 		$this->config($config);
+		/* configurar cookies */
+		$this->cookies();
 		/* iniciar sessão */
-		$this->start($httponly, $secure, $samesite, $lifetime);
-		/* definir status */
+		$this->start();
+		/* definir status inicial */
 		$this->STATUS = 0;
 		return;
 	}
 
 /*----------------------------------------------------------------------------*/
-	private function start($httponly, $secure, $samesite, $lifetime) {
-		/* inicia dados da sessão */
+	private function config($input) {
+		/* obtem e define dados da configuração conforme argumento do construtor (array ou arquivo JSON) */
 
+		/* definir direto se for um array */
+		if (gettype($input) === "array") {
+			$config = $input;
+		}
+
+		/* se for um arquivo, obter dados */
+		elseif ($this->isFile($input)) {
+			/* 1) tentar ler o conteúdo do arquivo */
+			$content = file_get_contents($input);
+			if ($content === false) {
+				$this->error("CONFIG", "Error reading configuration file");
+			}
+			/* 2) tentar decodifica o JSON para array */
+			$array = json_decode($content, true);
+			if ($array === null) {
+				$this->error("CONFIG", "Error in JSON file structure");
+			}
+			/* 3) checar se o dado primário do JSON é um array */
+			if (gettype($array) !== "array") {
+				$this->error("CONFIG", "Inadequate configuration data");
+			}
+			/* 4) definir config */
+			$config = $array;
+		}
+
+		/* no caso de não ser array ou arquivo JSON, relatar erro */
+		else {
+			$this->error("CONFIG", "Inappropriate argument");
+		}
+
+		/* checar dados de CONFIG, se assim estiver definido */
+		if (!isset($config["CHECK"]) || $config["CHECK"] !== false) {
+			$this->check($config);
+		}
+
+		return;
+	}
+
+/*----------------------------------------------------------------------------*/
+	private function check($input, $ref = null) {
+		/* checa ou define dados de configuração */
+
+		/* obter parâmetros da estrutura */
+		$struct = $ref === null ? $this->STRUCT : $this->STRUCT[$ref]["KEYS"];
+
+		/* looping pelas restrições */
+		foreach ($struct as $id => $check) {
+
+			/* obter valor de referência para a mensagem de erro */
+			$msg = $ref === null ? "CONFIG.{$id}" : "CONFIG.{$ref}.{$id}";
+
+			/* chave não definida: checar obrigatoriedade */
+			if (!isset($input[$id])) {
+				if ($check["REQUIRED"]) {
+					$this->error($msg, "Information not provided");
+				} else {
+					continue;
+				}
+			}
+
+			/* chave definida: checar parâmetros */
+			else {
+
+				/* checar o tipo */
+				if (!$this->matchType($check["TYPE"], $input[$id])) {
+					$this->error($msg, "Inappropriate information");
+				}
+
+				/* checar valor mínimo */
+				if (isset($check["SIZE"])) {
+					$size = $check["TYPE"] === "array" ? count($input[$id]) : $input[$id];
+					if ($size < $check["SIZE"]) {
+						$this->error($msg, "Insufficient data");
+					}
+				}
+
+				/* checar identificadores proibidos */
+				if (isset($check["BADKEYS"])) {
+					foreach($input[$id] as $key => $item) {
+						if (in_array($key, $check["BADKEYS"])) {
+							$this->error($msg, "Inappropriate identifier ($key)");
+						}
+					}
+				}
+
+				/* checar tipos da lista */
+				if (isset($check["TYPELIST"])) {
+					foreach($input[$id] as $key => $item) {
+						if (!$this->matchType($check["TYPELIST"], $item)) {
+							$this->error($msg, "Inappropriate information ({$key})");
+						}
+					}
+				}
+
+				/* passou nos parâmetros: definir CONFIG e sua chave, se necessário */
+				if ($ref === null && !isset($this->CONFIG)) {
+					$this->CONFIG = array();
+				} elseif ($ref !== null && !isset($this->CONFIG[$ref])) {
+					$this->CONFIG[$ref] = array();
+				}
+
+				/* se não for uma chave mãe, definir o valor */
+				if (!isset($check["KEYS"])) {
+					if ($ref === null) {
+						$this->CONFIG[$id] = $input[$id];
+					} else {
+						$this->CONFIG[$ref][$id] = $input[$id];
+					}
+				} else { /* caso contrário: checar chave filha */
+					$this->check($input[$id], $id);
+				}
+			}
+		}
+
+		return;
+	}
+
+/*----------------------------------------------------------------------------*/
+	private function cookies() {
 		/* configurar cookies */
 		/*-------------------------------------------------------------------------\
 		| https://www.php.net/manual/pt_BR/function.setcookie.php
@@ -144,6 +284,11 @@ class Driver {
 		| https://www.php.net/manual/pt_BR/reserved.variables.server.php
 		| https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Headers/Set-Cookie/SameSite
 		\-------------------------------------------------------------------------*/
+
+/*
+
+
+
 		if (ini_get("session.cookie_httponly") !== false) {
 			ini_set(
 				"session.cookie_httponly",
@@ -171,6 +316,17 @@ class Driver {
 			);
 		}
 
+*/
+
+
+
+	}
+
+
+/*----------------------------------------------------------------------------*/
+	private function start() {
+		/* inicia dados da sessão */
+
 		/* iniciar se não iniciada */
 		if (!isset($_SESSION)) {
 			session_start();
@@ -187,115 +343,6 @@ class Driver {
 			}
 		}
 		return;
-	}
-
-
-/*----------------------------------------------------------------------------*/
-	private function config($config) {
-		/* obtem e define dados da configuração conforme argumento do construtor (array ou arquivo JSON) */
-
-		/* se for um arquivo, obter dados */
-		if ($this->isFile($config)) {
-
-			/* 1) tentar ler o conteúdo do arquivo */
-			$content = file_get_contents($config);
-			if ($content === false) {
-				$this->error("CONFIG", "Error reading configuration file");
-			}
-
-			/* 2) tentar decodifica o JSON para array */
-			$array = json_decode($content, true);
-			if ($array === null) {
-				$this->error("CONFIG", "Error in JSON file structure");
-			}
-
-			/* 3) checar o dado primário do JSON é um array */
-			if (gettype($array) !== "array") {
-				$this->error("CONFIG", "Inadequate configuration data");
-			}
-
-			/* 4) definir CONFIG */
-			$this->CONFIG = $array;
-
-		} elseif (gettype($config) === "array") {
-			/* definir direto se for um array */
-			$this->CONFIG = $config;
-
-		} else {
-			/* no caso de falhar com o arquivo ou array */
-			$this->error("CONFIG", "Inappropriate argument");
-		}
-
-		/* checar dados de CONFIG, se assim estiver definido */
-		if (!isset($this->CONFIG["CHECK"]) || $this->CONFIG["CHECK"] !== false) {
-			$this->check();
-		}
-
-		return;
-	}
-
-/*----------------------------------------------------------------------------*/
-	private function check($ref = null) {
-
-		/* obter dados */
-		$data   = $ref === null ? $this->CONFIG : $this->CONFIG[$ref];
-		$struct = $ref === null ? $this->STRUCT : $this->STRUCT[$ref]["KEYS"];
-
-		/* looping pelas restrições */
-		foreach ($struct as $id => $check) {
-
-			$info   = $ref === null ? "CONFIG.{$id}" : "CONFIG.{$ref}.{$id}";
-
-			/* se chave não obrigatória e não foi definida: null */
-			if ($check["REQUIRED"] === false && !isset($data[$id])) {
-				if ($ref === null) {$this->CONFIG[$id]       = null;}
-				else               {$this->CONFIG[$ref][$id] = null;}
-
-			} else {
-				/* se chave é obrigatória: checar */
-				if (!isset($data[$id])) {
-					$this->error($info, "Information not provided");
-				}
-
-				/* checar o tipo */
-				if (!$this->matchType($check["TYPE"], $data[$id])) {
-					$this->error($info, "Inappropriate information");
-				}
-
-				/* checar valor mínimo */
-				if (isset($check["SIZE"])) {
-					$size = $check["TYPE"] === "array" ? count($data[$id]) : $data[$id];
-					if ($size < $check["SIZE"]) {
-						$this->error($info, "Insufficient data");
-					}
-				}
-
-				/* checar identificadores proibidos */
-				if (isset($check["BADKEYS"])) {
-					foreach($data[$id] as $key => $item) {
-						if (in_array($key, $check["BADKEYS"])) {
-							$this->error($info, "Inappropriate identifier ($key)");
-						}
-					}
-				}
-
-				/* checar tipos da lista */
-				if (isset($check["TYPELIST"])) {
-					foreach($data[$id] as $key => $item) {
-						if (!$this->matchType($check["TYPELIST"], $item)) {
-							$this->error($info, "Inappropriate information ({$key})");
-						}
-					}
-				}
-
-				/* checar subitens */
-				if (isset($check["KEYS"])) {
-					$this->check($id);
-				}
-			}
-
-		}
-
 	}
 
 /*----------------------------------------------------------------------------*/
@@ -345,7 +392,7 @@ class Driver {
 		/* define o identificador da sessão a partir dos dados do usuário */
 
 		/* checando se precisa de autenticação e os valores de sessão */
-		if ($this->CONFIG["LOG"] === null)            {return null;}
+		if (!isset($this->CONFIG["LOG"]))             {return null;}
 		if ($_SESSION["__DRIVER__"]["USER"] === null) {return null;}
 		if ($_SESSION["__DRIVER__"]["TIME"] === null) {return null;}
 		if ($_SESSION["__DRIVER__"]["DATE"] === null) {return null;}
@@ -381,8 +428,8 @@ class Driver {
 		/* se o método não for POST, não está solicitando autenticação */
 		if ($_SERVER["REQUEST_METHOD"] !== "POST") {return false;}
 
-		/* se não exigir altenticação, não tem o que verificar */
-		if ($this->CONFIG["LOG"] === null) {return false;}
+		/* se não exigir autenticação, não tem o que verificar */
+		if (!isset($this->CONFIG["LOG"])) {return false;}
 
 		/* se já autenticado, não há como solicitar autenticação */
 		if ($this->log()) {return false;}
@@ -448,7 +495,7 @@ class Driver {
 	}
 
 /*----------------------------------------------------------------------------*/
-	private function freeAccess() {
+	private function free() {
 		/* retorna a rota sem autenticação */
 
 		$id = $this->id();
@@ -471,7 +518,7 @@ class Driver {
 	}
 
 /*----------------------------------------------------------------------------*/
-	private function restrictedAccess() {
+	private function restricted() {
 		/* define a rota com autenticação */
 
 		/* usuário tentando autenticar */
@@ -556,8 +603,7 @@ class Driver {
 		session_regenerate_id(true);
 
 		/* obtendo resultado da requisição */
-		$log  = $this->CONFIG["LOG"];
-		$path = $log === null ? $this->freeAccess() : $this->restrictedAccess();
+		$path = isset($this->CONFIG["LOG"]) ? $this->restricted() : $this->free();
 
 		/* verificando se é o caso de limpar a sessão (STATUS sessão encerrada e sessão expirada) */
 		if (in_array($this->STATUS, array(7, 8))) {
@@ -568,7 +614,7 @@ class Driver {
 		$this->history($path);
 
 		/* checar necessidade de desvio da página (exceto entradas e saídas) */
-		if ($this->CONFIG["LOG"] !== null && $this->CONFIG["LOG"]["LOAD"] !== null) {
+		if (isset($this->CONFIG["LOG"]) && isset($this->CONFIG["LOG"]["LOAD"])) {
 			$load = call_user_func($this->CONFIG["LOG"]["LOAD"], $this->debug());
 
 			/* se o retorno foi um arquivo válido, retorná-lo para path */
@@ -612,7 +658,7 @@ class Driver {
 		$ID    = $this->CONFIG["ID"];
 		$page  = ($id === null || !isset($ID[$id])) ? null : $ID[$id];
 		$index = $_SERVER["SCRIPT_NAME"];
-		$log   = $this->CONFIG["LOG"] === null ? false : true;
+		$log   = isset($this->CONFIG["LOG"]) ? true : false;
 		$items = count($_SESSION["__DRIVER__"]["LOG"]);
 
 		$_SESSION["__DRIVER__"]["LAST"] = array(
@@ -662,24 +708,8 @@ class Driver {
 	public function json($print = false) {
 		/* retorna ou imprime dados de configuração em formato JSON */
 
-		/* obtendo informações de CONFIG */
-		$data = array(
-			"CHECK" => $this->CONFIG["CHECK"],
-			"HOME"  => $this->CONFIG["HOME"],
-			"ID"    => $this->CONFIG["ID"],
-			"LOG"   => $this->CONFIG["LOG"] === null ? null : array(
-				"GATEWAY" => $this->CONFIG["LOG"]["GATEWAY"],
-				"EXIT"    => $this->CONFIG["LOG"]["EXIT"],
-				"DATA"    => $this->CONFIG["LOG"]["DATA"],
-				"LOGIN"   => $this->CONFIG["LOG"]["LOGIN"],
-				"ALLOW"   => $this->CONFIG["LOG"]["ALLOW"],
-				"LOAD"    => $this->CONFIG["LOG"]["LOAD"],
-				"TIME"    => $this->CONFIG["LOG"]["TIME"]
-			)
-		);
-
 		/* decodificando para JSON */
-		$json = json_encode($data);
+		$json = json_encode($this->CONFIG);
 
 		if ($json === false) {
 			$this->error("json()", "Error encoding data to JSON");
@@ -687,24 +717,13 @@ class Driver {
 		}
 
 		/* fazendo umas substituições para melhor visualização */
+		$json = trim($json);
 		$json = str_replace("\\", "", $json);
-		$json = str_replace("}}", "\n\t}\n}", $json);
+		$json = preg_replace("/(\"[a-z0-9-_]+\"\:)/mi", "\n\t\t$0 ", $json);
+		$json = preg_replace("/\t\"(CHECK|HOME|ID|LOG|COOKIES)\"/", "\"$1\"", $json);
 		$json = str_replace("\",\"", "\", \"", $json);
-		$json = str_replace("\"LOG\":null}", "\"LOG\": null\n}", $json);
-
-		$srpl = array(
-			"CHECK" => 0, "HOME" => 0, "ID"    => 0, "LOG"   => 0, "GATEWAY" => 1,
-			"EXIT"  => 1, "DATA" => 1, "LOGIN" => 1, "ALLOW" => 1, "LOAD" => 1,
-			"TIME"  => 1
-		);
-
-		foreach ($srpl as $key => $type) {
-			if ($type === 0) {
-				$json = str_replace("\"{$key}\":", "\n\t\"{$key}\": ", $json);
-			} elseif ($type === 1) {
-				$json = str_replace("\"{$key}\":", "\n\t\t\"{$key}\": ", $json);
-			}
-		}
+		$json = str_replace("},", "\n\t},", $json);
+		$json = str_replace("}}", "\n\t}\n}", $json);
 
 		/* imprimindo, se for o caso, e retornando */
 		if ($print === true) {
