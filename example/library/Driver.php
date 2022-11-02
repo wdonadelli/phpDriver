@@ -110,21 +110,30 @@ class Driver {
 			"REQUIRED" => false,
 			"TYPE"     => "array",
 			"KEYS"     => array(
-				"HTTPONLY" => array( /* não permitir acesso por JS */
+				"HTTPONLY" => array( /* The cookie can only be accessed through the HTTP protocol (sem JS?) */
 					"REQUIRED" => false,
 					"TYPE"     => "boolean"
 				),
-				"SECURE" => array( /* só permitir transmissão em HTTPS */
+				"SECURE" => array( /*  The cookie should only be sent over secure connections (só em HTTPS?) */
 					"REQUIRED" => false,
 					"TYPE"     => "boolean"
 				),
-				"SAMESITE" => array( /* como compartilhar cookies entre sites */
+				"SAMESITE" => array( /* Controls the cross-domain sending of the cookie */
+					"REQUIRED" => false,
+					"TYPE"     => "string",
+					"VALUES"   => array("lax", "strict", "none")
+				),
+				"LIFETIME" => array( /*  The lifetime of the cookie in seconds */
+					"REQUIRED" => false,
+					"TYPE"     => "integer"
+				),
+				"PATH" => array( /* The path where information is stored */
 					"REQUIRED" => false,
 					"TYPE"     => "string"
 				),
-				"LIFETIME" => array( /* tempo de vida do cookie */
+				"DOMAIN" => array( /*  The domain of the cookie */
 					"REQUIRED" => false,
-					"TYPE"     => "integer"
+					"TYPE"     => "string"
 				)
 			)
 		)
@@ -250,6 +259,13 @@ class Driver {
 					}
 				}
 
+				/* checar valores possíveis */
+				if (isset($check["VALUES"])) {
+					if (!in_array($input[$id], $check["VALUES"], true)) {
+						$this->error($msg, "Inappropriate information ({$input[$id]})");
+					}
+				}
+
 				/* passou nos parâmetros: definir CONFIG e sua chave, se necessário */
 				if ($ref === null && !isset($this->CONFIG)) {
 					$this->CONFIG = array();
@@ -277,49 +293,32 @@ class Driver {
 	private function cookies() {
 		/* configurar cookies */
 		/*-------------------------------------------------------------------------\
-		| https://www.php.net/manual/pt_BR/function.setcookie.php
-		| https://www.php.net/manual/en/function.ini-set.php
-		| https://www.php.net/manual/en/function.ini-get.php
+		| https://www.php.net/manual/en/function.session-get-cookie-params.php
+		| https://www.php.net/manual/en/function.session-set-cookie-params.php
 		| https://www.php.net/manual/en/ini.list.php
-		| https://www.php.net/manual/pt_BR/reserved.variables.server.php
 		| https://developer.mozilla.org/pt-BR/docs/Web/HTTP/Headers/Set-Cookie/SameSite
 		\-------------------------------------------------------------------------*/
 
-/*
+		$params = session_get_cookie_params();
+		$https  = isset($_SERVER["HTTPS"]) && !empty($_SERVER["HTTPS"]) ? true : false;
 
+		/* valores padrão da biblioteca */
+		$params["httponly"] = true;
+		$params["secure"]   = $https;
+		$params["samesite"] = "lax";
 
-
-		if (ini_get("session.cookie_httponly") !== false) {
-			ini_set(
-				"session.cookie_httponly",
-				$httponly === false ? false : true
-			);
-		}
-		if (ini_get("session.cookie_secure") !== false) {
-			$https = isset($_SERVER["HTTPS"]) && !empty($_SERVER["HTTPS"]) ? true : false;
-			ini_set(
-				"session.cookie_secure",
-				gettype($secure) === "boolean" ? $secure : $https
-			);
-		}
-		if (ini_get("session.cookie_samesite") !== false) {
-			$options = array("Lax", "Strict", "None");
-			ini_set(
-				"session.cookie_samesite",
-				in_array($samesite, $options, true) ? $samesite : "Lax"
-			);
-		}
-		if (ini_get("session.cookie_lifetime") !== false) {
-			ini_set(
-				"session.cookie_lifetime",
-				gettype($lifetime) === "integer" && $lifetime > 0 ? $lifetime : 0
-			);
+		/* definindo os valores advindos da configuração */
+		if (isset($this->CONFIG["COOKIES"])) {
+			foreach ($this->CONFIG["COOKIES"] as $key => $value) {
+				$id = strtolower($key);
+				$params[$id] = $value;
+			}
 		}
 
-*/
+		/* definindo configuração */
+		session_set_cookie_params($params);
 
-
-
+		return;
 	}
 
 
@@ -362,7 +361,10 @@ class Driver {
 /*----------------------------------------------------------------------------*/
 	private function error($root, $msg) {
 		/* exibe uma mensagem de erro e para a interpretação */
-		trigger_error("Driver (<code>{$root}</code>): {$msg} ");
+		header("Content-Type: text/html");
+		echo "<!DOCTYPE html>";
+		echo "<b>Driver Error:</b> {$msg} [<code>{$root}</code>].";
+		echo "<br/><br/>Stopped script.";
 		exit;
 	}
 
@@ -445,6 +447,9 @@ class Driver {
 
 		foreach ($this->CONFIG["LOG"]["DATA"] as $value) { /* checar nomes dos formulários */
 			if (!isset($_POST[$value])) {return false;}
+			/* codificar dados para evitar script imbutido */
+			$_POST[$value] = stripslashes($_POST[$value]);
+			$_POST[$value] = htmlspecialchars($_POST[$value]);
 		}
 
 		return true;
@@ -718,7 +723,7 @@ class Driver {
 
 		/* fazendo umas substituições para melhor visualização */
 		$json = trim($json);
-		$json = str_replace("\\", "", $json);
+		$json = stripslashes($json);
 		$json = preg_replace("/(\"[a-z0-9-_]+\"\:)/mi", "\n\t\t$0 ", $json);
 		$json = preg_replace("/\t\"(CHECK|HOME|ID|LOG|COOKIES)\"/", "\"$1\"", $json);
 		$json = str_replace("\",\"", "\", \"", $json);

@@ -1,5 +1,4 @@
 {
-	"CHECK": true,
 	"HOME":  "content/home.php",
 	"ID": {
 		"config": "content/config.php",

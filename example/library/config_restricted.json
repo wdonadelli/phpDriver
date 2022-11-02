@@ -1,5 +1,4 @@
 {
-	"CHECK": true,
 	"HOME":  "content/home.php",
 	"ID": {
 		"config": "content/config.php",
@@ -14,13 +13,6 @@
 		"LOGIN":   "credentialChecker",
 		"ALLOW":   "accessChecker",
 		"LOAD":    "loadChecker",
-		"TIME":    180,
-		"DOIDO": 1
-	},
-	"COOKIES": {
-		"SAMESITE": "LAX"
-
-
-	},
-	"LOKO": 1
+		"TIME":    180
+	}
 }
