@@ -1,4 +1,9 @@
 <?php
+if (!isset($driver)) {
+	header('Location: index.php');
+	exit;
+}
+
 
 /* Getting the file path: */
 $path = $driver->path();
