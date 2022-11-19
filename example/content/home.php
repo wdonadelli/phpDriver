@@ -1,10 +1,3 @@
-<?php
-if (!isset($driver)) {
-	header('Location: ../');
-	exit;
-}
-?>
-
 <main>
 
 	<header>
